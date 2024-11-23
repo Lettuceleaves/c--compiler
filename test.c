@@ -1,3 +1,5 @@
-123
-Lettuce
-l e a v e s
+int nums;
+float f;
+int a;
+nums = a;
++ - * / || ^ && & ! ~
