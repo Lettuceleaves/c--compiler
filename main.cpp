@@ -6,16 +6,17 @@
 #include <fstream>
 #include <unordered_set>
 #include <unordered_map>
+#include <math.h>
 using namespace std;
 
 bool mode_asm = false;
 bool mode_code = false;
 bool mode_token = false;
 
-enum token_type {INT, FLOAT, CHAR,    // data type
+enum token_type {INT, FLOAT, CHAR, STRING,   // data type
             IF, ELSE, ELSE_IF, WHILE, EQUAL, GRATER, GRATER_EQUAL, LESS, LESS_EQUAL, LOG_AND, LOG_OR, LOG_NOT_EQUAL, LOG_NOT,    // logic control
-            AND, OR, XOR, LEFT_MOVE, RIGHT_MOVE, ADD, SUB, ASSIGN, DIV, MUL, MOD, QUES, OPPO, // culculate
-            RET, EOF_, SEMICOLON, DOT, SINGLE_QUOT, DOUBLE_QUOT, POINT, FRONT_BRACKET, BACK_BRACKET};    // others
+            AND, OR, XOR, LEFT_MOVE, RIGHT_MOVE, ADD, SUB, ASSIGN, DIV, MUL, MOD, QUES, OPPO, CONST, // culculate
+            RET, EOF_, SEMICOLON, DOT, SINGLE_QUOT, DOUBLE_QUOT, POINT, FRONT_BRACKET, BACK_BRACKET, PRINT};    // others
 
 struct token{
     int line = 0;
@@ -52,16 +53,51 @@ void add_token(int line, int type, int float_val, int int_val, string lexeme){
     tokens.push_back(t);
 }
 
-// int get_next_num(float& f, string line, int cur){
-//     for()
-// }
+int get_next_num(float& f, string line, int cur, int& size){
+    int len = line.size();
+    string num = "";
+    int i = cur;
+    bool dot = true;
+    for(; i < len; i++){
+        if(line[i] == ' ') continue;
+        else break;
+    }
+    for(; i < len; i++){
+        if(isdigit(line[i])){
+            num += line[i];
+        }
+        else if(line[i] == '.' && dot){
+            num += '.';
+            dot = false;
+        }
+        else if(line[i] == '.' && !dot){
+            cout << "Number Error" << endl;
+            f = 0.00f / 0.00f;
+            return 0;
+        }
+        else break;
+    }
+    size = i - cur;
+    if(dot){
+        return stoi(num);
+    }
+    else{
+        f = stof(num);
+        return 0;
+    }
+}
 
 int parser(ifstream &file){
     string line;
     int line_num = 1;
+    bool next_line = false;
     while(getline(file, line)){
         int len = line.size();
         for(int cur = 0; cur < len; cur++){
+            if(next_line){
+                next_line = false;
+                break;
+            }
             if(line[cur] == ' ') continue;
             else if(isalpha(line[cur])){
                 string word = get_this_word(line, cur);
@@ -71,6 +107,10 @@ int parser(ifstream &file){
                 }
                 else if(word == "while"){
                     add_token(line_num, WHILE, 0, 0, word);
+                    cur += word.size() - 1;
+                }
+                else if(word == "printf"){
+                    add_token(line_num, PRINT, 0, 0, word);
                     cur += word.size() - 1;
                 }
                 else if(word == "if"){
@@ -118,8 +158,31 @@ int parser(ifstream &file){
                     }
                 }
             }
-            else if(line[cur] == '#') continue;
-            else if(cur + 1 < len && line[cur + 1] == '/' && line[cur] == '/') continue;
+            else if(isdigit(line[cur])){
+                float f = 0;
+                int size = 0;
+                int num = get_next_num(f, line, cur, size);
+                if(isnan(f)){
+                    cout << "Error happened in char: " << cur << endl;
+                    return line_num;
+                }
+                else if(f > 0){
+                    add_token(line_num, CONST, f, 0, "FLOAT");
+                    cur += size - 1;
+                }
+                else{
+                    add_token(line_num, CONST, 0, num, "INT");
+                    cur += size - 1;
+                }
+            }
+            else if(line[cur] == '#'){
+                next_line = true;
+                continue;
+            }
+            else if(cur + 1 < len && line[cur + 1] == '/' && line[cur] == '/'){
+                next_line = true;
+                continue;
+            }
             else if(line[cur] == '/') add_token(line_num, DIV, 0, 0, "/");
             else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '=') {add_token(line_num, EQUAL, 0, 0, "=="); cur++;}
             else if(line[cur] == '=') add_token(line_num, ASSIGN, 0, 0, "=");
@@ -135,8 +198,19 @@ int parser(ifstream &file){
             else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '>') {add_token(line_num, GRATER_EQUAL, 0, 0, ">="); cur++;}
             else if(cur + 1 < len && line[cur + 1] == '>' && line[cur] == '>') {add_token(line_num, RIGHT_MOVE, 0, 0, ">>"); cur++;}
             else if(line[cur] == '>') add_token(line_num, GRATER, 0, 0, ">");
-            else if(cur + 1 < len && line[cur + 1] == '\'' && line[cur] == '\'') {add_token(line_num, DOUBLE_QUOT, 0, 0, "\'\'"); cur++;}
-            else if(line[cur] == '\'') add_token(line_num, SINGLE_QUOT, 0, 0, "\'");
+            else if(line[cur] == '\"') {
+                for(int i = cur + 2; i < len - 1; i++){
+                    if(line[i] == '\"'){ 
+                        add_token(line_num, STRING, 0, 0, line.substr(cur + 1, i - cur - 1));
+                        cur = i;
+                        break;
+                    }
+                }
+            }
+            else if(line[cur] == '\''){
+                add_token(line_num, CHAR, 0, (int)(line[cur + 1]), "CHAR");
+                cur += 2;
+            }
             else if(line[cur] == '(') add_token(line_num, FRONT_BRACKET, 0, 0, "(");
             else if(line[cur] == '[') add_token(line_num, FRONT_BRACKET, 0, 1, "[");
             else if(line[cur] == '{') add_token(line_num, FRONT_BRACKET, 0, 2, "{");
@@ -256,7 +330,7 @@ int main(int argc, char* argv[]) {
 
     if(mode_token){
         for(token t : tokens){
-            cout << "token line: "<< t.line << "\ttoken type: " << t.type << "\ttoken float_val: " << t.float_val << "\ttoken int_val" << t.int_val << "\ttoken lexeme: " << t.lexeme << endl;
+            cout << "token line: "<< t.line << "\ttoken type: " << t.type << "\ttoken float_val: " << t.float_val << "\ttoken int_val: " << t.int_val << "\ttoken lexeme: " << t.lexeme << endl;
         }
     }
 
