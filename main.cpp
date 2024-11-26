@@ -25,6 +25,7 @@ struct token{
     int type = -1;
     float float_val = 0;
     int int_val = 0;
+    int val_type;
     string lexeme = "";
 };
 
