@@ -30,6 +30,11 @@ unordered_map<string, int> var_name;
 
 vector<token> tokens;
 
+struct ast_node{
+    int size = 0;
+    vector<ast_node> node;
+};
+
 string get_this_word(string &s, int cur){
     int len = s.size();
     if(cur >= len) return "OUTRANGE";
