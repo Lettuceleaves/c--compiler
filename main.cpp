@@ -13,19 +13,23 @@ bool mode_asm = false;
 bool mode_code = false;
 bool mode_token = false;
 
-// enum token_type {INT, FLOAT, CHAR, STRING,   // data type
-//             IF, ELSE, ELSE_IF, WHILE, EQUAL, GRATER, GRATER_EQUAL, LESS, LESS_EQUAL, LOG_AND, LOG_OR, LOG_NOT_EQUAL, LOG_NOT,    // logic control
-//             AND, OR, XOR, LEFT_MOVE, RIGHT_MOVE, ADD, SUB, ASSIGN, DIV, MUL, MOD, QUES, OPPO, CONST, // culculate
-//             RET, EOF_, SEMICOLON, DOT, SINGLE_QUOT, DOUBLE_QUOT, POINT, FRONT_BRACKET, BACK_BRACKET, PRINT};    // others
+enum token_type {INT, FLOAT, CHAR, STRING,   // data type
+            IF, ELSE, ELSE_IF, WHILE, EQUAL,
+             GRATER, GRATER_EQUAL, LESS, LESS_EQUAL,
+              LOG_AND, LOG_OR, LOG_NOT_EQUAL, LOG_NOT,    // logic control
+            AND, OR, XOR, LEFT_MOVE, RIGHT_MOVE, ADD,
+             SUB, ASSIGN, DIV, MUL, MOD, QUES, OPPO, NOT, 
+              CONST, RET, EOF_, SEMICOLON, DOT, 
+              SINGLE_QUOT, DOUBLE_QUOT, POINT,
+               FRONT_BRACKET, BACK_BRACKET, PRINT};    // others
 
-enum token_type {DATA, SCOP, NAME, KEYW, CALC, SYST};
+// enum token_type {DATA, SCOP, NAME, KEYW, CALC, SYST};
 
 struct token{
     int line = 0;
     int type = -1;
     float float_val = 0;
     int int_val = 0;
-    int val_type;
     string lexeme = "";
 };
 
@@ -109,27 +113,27 @@ int parser(ifstream &file){
                     cur += word.size() - 1;
                 }
                 else if(word == "while"){
-                    add_token(line_num, KEYW, 0, 0, word);
+                    add_token(line_num, WHILE, 0, 0, word);
                     cur += word.size() - 1;
                 }
                 else if(word == "printf"){
-                    add_token(line_num, SYST, 0, 0, word);
+                    add_token(line_num, PRINT, 0, 0, word);
                     cur += word.size() - 1;
                 }
                 else if(word == "if"){
-                    add_token(line_num, KEYW, 0, 0, word);
+                    add_token(line_num, IF, 0, 0, word);
                     cur += word.size() - 1;
                 }
                 else if(word == "else" && get_this_word(line, cur + 5) == "if"){
-                    add_token(line_num, KEYW, 0, 0, "else_if");
+                    add_token(line_num, ELSE_IF, 0, 0, "else_if");
                     cur += 6;
                 }
                 else if(word == "else"){
-                    add_token(line_num, KEYW, 0, 0, word);
+                    add_token(line_num, ELSE, 0, 0, word);
                     cur += word.size() - 1;
                 }
                 else if(word == "return"){
-                    add_token(line_num, KEYW, 0, 0, word);
+                    add_token(line_num, RET, 0, 0, word);
                     cur += word.size() - 1;
                 }
                 else if(word == "int" || word == "char" || word == "float"){
@@ -146,18 +150,10 @@ int parser(ifstream &file){
                                 return line_num;
                             }
                             int type = 0;
-                            if(word == "int"){
-                                add_token(line_num, type, 0, 0, next_word);
-                                type = NAME;
-                            }
-                            else if(word == "char"){
-                                add_token(line_num, type, (0 / 0), 0, next_word);
-                                type = NAME;
-                            }
-                            else{
-                                add_token(line_num, type, 1, 0, next_word);
-                                type = NAME;
-                            }
+                            if(word == "int") type = INT;
+                            else if(word == "char") type = CHAR;
+                            else type = FLOAT;
+                            add_token(line_num, type, 0, 0, next_word);
                             var_name[next_word] = type;
                             cur = next + next_word.size() - 1;
                             break;
@@ -178,11 +174,11 @@ int parser(ifstream &file){
                     return line_num;
                 }
                 else if(f > 0){
-                    add_token(line_num, DATA, f, 0, "FLOAT");
+                    add_token(line_num, FLOAT, f, 0, "FLOAT");
                     cur += size - 1;
                 }
                 else{
-                    add_token(line_num, DATA, 0, num, "INT");
+                    add_token(line_num, INT, 0, num, "INT");
                     cur += size - 1;
                 }
             }
@@ -194,49 +190,49 @@ int parser(ifstream &file){
                 next_line = true;
                 continue;
             }
-            else if(line[cur] == '/') add_token(line_num, CALC, 0, 0, "/");
-            else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '=') {add_token(line_num, CALC, 0, 0, "=="); cur++;}
-            else if(line[cur] == '=') add_token(line_num, CALC, 0, 0, "=");
-            else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '!') {add_token(line_num, CALC, 0, 0, "!="); cur++;}
-            else if(line[cur] == '!') add_token(line_num, CALC, 0, 0, "!");
-            else if(cur + 1 < len && line[cur + 1] == '&' && line[cur] == '&') {add_token(line_num, CALC, 0, 0, "&&"); cur++;}
-            else if(line[cur] == '&') add_token(line_num, CALC, 0, 0, "&");
-            else if(cur + 1 < len && line[cur + 1] == '|' && line[cur] == '|') {add_token(line_num, CALC, 0, 0, "||"); cur++;}
-            else if(line[cur] == '|') add_token(line_num, CALC, 0, 0, "|");
-            else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '<') {add_token(line_num, CALC, 0, 0, "<="); cur++;}
-            else if(cur + 1 < len && line[cur + 1] == '<' && line[cur] == '<') {add_token(line_num, CALC, 0, 0, "<<"); cur++;}
-            else if(line[cur] == '<') add_token(line_num, CALC, 0, 0, "<");
-            else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '>') {add_token(line_num, CALC, 0, 0, ">="); cur++;}
-            else if(cur + 1 < len && line[cur + 1] == '>' && line[cur] == '>') {add_token(line_num, CALC, 0, 0, ">>"); cur++;}
-            else if(line[cur] == '>') add_token(line_num, CALC, 0, 0, ">");
+            else if(line[cur] == '/') add_token(line_num, DIV, 0, 0, "/");
+            else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '=') {add_token(line_num, EQUAL, 0, 0, "=="); cur++;}
+            else if(line[cur] == '=') add_token(line_num, ASSIGN, 0, 0, "=");
+            else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '!') {add_token(line_num, LOG_NOT, 0, 0, "!="); cur++;}
+            else if(line[cur] == '!') add_token(line_num, NOT, 0, 0, "!");
+            else if(cur + 1 < len && line[cur + 1] == '&' && line[cur] == '&') {add_token(line_num, LOG_AND, 0, 0, "&&"); cur++;}
+            else if(line[cur] == '&') add_token(line_num, AND, 0, 0, "&");
+            else if(cur + 1 < len && line[cur + 1] == '|' && line[cur] == '|') {add_token(line_num, LOG_OR, 0, 0, "||"); cur++;}
+            else if(line[cur] == '|') add_token(line_num, OR, 0, 0, "|");
+            else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '<') {add_token(line_num, LESS_EQUAL, 0, 0, "<="); cur++;}
+            else if(cur + 1 < len && line[cur + 1] == '<' && line[cur] == '<') {add_token(line_num, LEFT_MOVE, 0, 0, "<<"); cur++;}
+            else if(line[cur] == '<') add_token(line_num, LESS, 0, 0, "<");
+            else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '>') {add_token(line_num, GRATER_EQUAL, 0, 0, ">="); cur++;}
+            else if(cur + 1 < len && line[cur + 1] == '>' && line[cur] == '>') {add_token(line_num, RIGHT_MOVE, 0, 0, ">>"); cur++;}
+            else if(line[cur] == '>') add_token(line_num, GRATER, 0, 0, ">");
             else if(line[cur] == '\"') {
                 for(int i = cur + 2; i < len - 1; i++){
                     if(line[i] == '\"'){ 
-                        add_token(line_num, DATA, 0, -1, line.substr(cur + 1, i - cur - 1));
+                        add_token(line_num, STRING, 0, -1, line.substr(cur + 1, i - cur - 1));
                         cur = i;
                         break;
                     }
                 }
             }
             else if(line[cur] == '\''){
-                add_token(line_num, DATA, 0, (int)(line[cur + 1]), "CHAR");
+                add_token(line_num, CHAR, 0, (int)(line[cur + 1]), "CHAR");
                 cur += 2;
             }
-            else if(line[cur] == '(') add_token(line_num, SCOP, 0, 0, "(");
-            else if(line[cur] == '[') add_token(line_num, SCOP, 0, 1, "[");
-            else if(line[cur] == '{') add_token(line_num, SCOP, 0, 2, "{");
-            else if(line[cur] == ')') add_token(line_num, SCOP, 0, 0, ")");
-            else if(line[cur] == ']') add_token(line_num, SCOP, 0, 1, "]");
-            else if(line[cur] == '}') add_token(line_num, SCOP, 0, 2, "}");
-            else if(line[cur] == ',') add_token(line_num, SCOP, 0, 0, ",");
-            else if(line[cur] == '+') add_token(line_num, CALC, 0, 0, "+");
-            else if(line[cur] == '-') add_token(line_num, CALC, 0, 0, "-");
-            else if(line[cur] == '*') add_token(line_num, CALC, 0, 0, "*");
-            else if(line[cur] == '^') add_token(line_num, CALC, 0, 0, "^");
-            else if(line[cur] == '~') add_token(line_num, CALC, 0, 0, "~");
-            else if(line[cur] == '%') add_token(line_num, CALC, 0, 0, "%");
-            else if(line[cur] == '?') add_token(line_num, CALC, 0, 0, "?");
-            else if(line[cur] == ';') add_token(line_num, SCOP, 0, 0, ";");
+            else if(line[cur] == '(') add_token(line_num, FRONT_BRACKET, 0, 0, "(");
+            else if(line[cur] == '[') add_token(line_num, FRONT_BRACKET, 0, 1, "[");
+            else if(line[cur] == '{') add_token(line_num, FRONT_BRACKET, 0, 2, "{");
+            else if(line[cur] == ')') add_token(line_num, BACK_BRACKET, 0, 0, ")");
+            else if(line[cur] == ']') add_token(line_num, BACK_BRACKET, 0, 1, "]");
+            else if(line[cur] == '}') add_token(line_num, BACK_BRACKET, 0, 2, "}");
+            else if(line[cur] == ',') add_token(line_num, DOT, 0, 0, ",");
+            else if(line[cur] == '+') add_token(line_num, ADD, 0, 0, "+");
+            else if(line[cur] == '-') add_token(line_num, SUB, 0, 0, "-");
+            else if(line[cur] == '*') add_token(line_num, MUL, 0, 0, "*");
+            else if(line[cur] == '^') add_token(line_num, XOR, 0, 0, "^");
+            else if(line[cur] == '~') add_token(line_num, OPPO, 0, 0, "~");
+            else if(line[cur] == '%') add_token(line_num, MOD, 0, 0, "%");
+            else if(line[cur] == '?') add_token(line_num, QUES, 0, 0, "?");
+            else if(line[cur] == ';') add_token(line_num, SEMICOLON, 0, 0, ";");
             else{
                 cout << "Error happened in char:\t" << cur << endl;
                 return line_num;
@@ -244,7 +240,7 @@ int parser(ifstream &file){
         }
         line_num++;
     }
-    add_token(line_num, SYST, 0, 0, "EOF");
+    add_token(line_num, EOF_, 0, 0, "EOF");
     return 0;
 }
 
