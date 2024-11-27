@@ -12,6 +12,7 @@ using namespace std;
 bool mode_asm = false;
 bool mode_code = false;
 bool mode_token = false;
+bool mode_ast = false;
 
 enum token_type {INT, FLOAT, CHAR, STRING,   // data type
             IF, ELSE, ELSE_IF, WHILE, EQUAL,
@@ -33,14 +34,22 @@ struct token{
     string lexeme = "";
 };
 
+class AST_node{
+    int size = 0;
+    vector<AST_node* > nodes;
+    AST_node(){this -> size = 0;};
+    AST_node(int s){
+        this -> size = s;
+        vector<AST_node* > t(0);
+        this -> nodes = t;
+    };
+};
+
 unordered_map<string, int> var_name;
 
 vector<token> tokens;
 
-struct ast_node{
-    int size = 0;
-    vector<ast_node> node;
-};
+AST_node* AST_Head;
 
 string get_this_word(string &s, int cur){
     int len = s.size();
@@ -99,10 +108,12 @@ int get_next_num(float& f, string line, int cur, int& size){
     }
 }
 
-int parser(ifstream &file){
+int lexer(ifstream &file){
+    
     string line;
     int line_num = 1;
     bool next_line = false;
+    add_token(0, EOF_, 0, 0, "");
     while(getline(file, line)){
         int len = line.size();
         for(int cur = 0; cur < len; cur++){
@@ -111,6 +122,7 @@ int parser(ifstream &file){
                 break;
             }
             if(line[cur] == ' ') continue;
+            else if(line[cur] == '\t') continue;
             else if(isalpha(line[cur])){
                 string word = get_this_word(line, cur);
                 if(var_name.find(word) != var_name.end()){
@@ -249,12 +261,16 @@ int parser(ifstream &file){
     return 0;
 }
 
+int parser(){
+    return 0;
+}
+
 int main(int argc, char* argv[]) {
 
     // input check print
 
     for (int i = 0; i < argc; i++) {
-        cout << "i: " << i << " argv: " << argv[i] << endl;
+        cout << endl << "i: " << i << " argv: " << argv[i] << endl;
     }
     cout << endl;
 
@@ -274,19 +290,11 @@ int main(int argc, char* argv[]) {
     }
     else if (argc == 2) {}
     else if (argc == 3) {
-        if (args[2] == "-asm") {
-            mode_asm = true;
-        }
-        else if (args[2] == "-showcode") {
-            mode_code = true;
-        }
-        else if(args[2] == "-showtoken"){
-            mode_token = true;
-        }
-        else {
-            cout << "Could not find " + args[2] + " mode" << endl;
-            return 3;
-        }
+        if (args[2] == "-asm") mode_asm = true;
+        else if (args[2] == "-showcode") mode_code = true;
+        else if (args[2] == "-showtoken") mode_token = true;
+        else if (args[2] == "-showast") mode_ast = true;
+        else { cout << "Could not find " + args[2] + " mode" << endl; return 3;}
     }
     else if (argc == 4) {
         if (args[2] == "-asm" && args[3] == "-showcode"){
@@ -297,9 +305,7 @@ int main(int argc, char* argv[]) {
             mode_asm = true;
             mode_code = true;
         }
-        else {
-            cout << " Please enter in valid format" << endl;
-        }
+        else cout << " Please enter in valid format" << endl;
     }
     else {
         cout << "Please do not input more than three arguments" << endl;
@@ -308,42 +314,34 @@ int main(int argc, char* argv[]) {
 
     ifstream input_file (args[1]);
 
-    if (!input_file.is_open()) {
-        cout << "Could not open the file" << endl;
-        return 2;
-    }
-    else {
-        cout << "Successfully opened the file" << endl << endl;
-    }
+    if (!input_file.is_open()) { cout << "Could not open the file" << endl; return 2;}
+    else cout << "Successfully opened the file" << endl << endl;
 
     // cout code if choose the mode
 
-    if (mode_code) {
-        string line;
-        while (getline(input_file, line)) {
-            cout << line << endl;
-        }
-    }
+    if (mode_code) { string line; while (getline(input_file, line)) cout << line << endl;}
 
-    // parser
+    // lexer
 
-    int parser_err = parser(input_file);
+    int lexer_err = lexer(input_file);
 
-    if(parser_err != 0){
-        cout << " Error happened in line: " << parser_err << endl;
-        return -1;
-    }
-    else{
-        cout << "Parser runs successfully" << endl;
-    }
+    if(lexer_err != 0){ cout << " Error happened in line: " << lexer_err << endl; return -1;}
+    else cout << "Lexer runs successfully" << endl << endl;
 
     // print tokens if choose the mode
 
-    if(mode_token){
-        for(token t : tokens){
-            cout << "token line: "<< t.line << "\ttoken type: " << t.type << "\ttoken float_val: " << t.float_val << "\ttoken int_val: " << t.int_val << "\ttoken lexeme: " << t.lexeme << endl;
-        }
-    }
+    if(mode_token) for(token t : tokens) cout << "token line: "<< t.line << "\ttoken type: " << t.type << "\ttoken float_val: " << t.float_val << "\ttoken int_val: " << t.int_val << "\ttoken lexeme: " << t.lexeme << endl;
+
+    // build parser
+
+    int parser_err = parser();
+
+    if(parser_err) return -1;
+    else cout << "Parser runs successfully" << endl << endl;
+
+    // print ast tree if choose the mode
+
+    if(mode_ast) cout << "unsupport" << endl << endl;
 
     // safe exit
 
