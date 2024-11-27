@@ -14,15 +14,15 @@ bool mode_code = false;
 bool mode_token = false;
 bool mode_ast = false;
 
-enum token_type {INT, FLOAT, CHAR, STRING,   // data type
-            IF, ELSE, ELSE_IF, WHILE, EQUAL,
-             GRATER, GRATER_EQUAL, LESS, LESS_EQUAL,
-              LOG_AND, LOG_OR, LOG_NOT_EQUAL, LOG_NOT,    // logic control
-            AND, OR, XOR, LEFT_MOVE, RIGHT_MOVE, ADD,
-             SUB, ASSIGN, DIV, MUL, MOD, QUES, OPPO, NOT, 
-              CONST, RET, EOF_, SEMICOLON, DOT, 
-              SINGLE_QUOT, DOUBLE_QUOT, POINT,
-               FRONT_BRACKET, BACK_BRACKET, PRINT};    // others
+enum token_type {   INT, FLOAT, CHAR, STRING,   // data type
+                    IF, ELSE, ELSE_IF, WHILE, EQUAL,
+                    GRATER, GRATER_EQUAL, LESS, LESS_EQUAL,
+                    LOG_AND, LOG_OR, LOG_NOT_EQUAL, LOG_NOT,    // logic control
+                    AND, OR, XOR, LEFT_MOVE, RIGHT_MOVE, ADD,
+                    SUB, ASSIGN, DIV, MUL, MOD, QUES, OPPO, NOT, 
+                    CONST, RET, EOF_, SEMICOLON, DOT, 
+                    SINGLE_QUOT, DOUBLE_QUOT, POINT,
+                    FRONT_BRACKET, BACK_BRACKET, PRINT};    // others
 
 // enum token_type {DATA, SCOP, NAME, KEYW, CALC, SYST};
 
@@ -35,8 +35,9 @@ struct token{
 };
 
 class AST_node{
-    int size = 0;
-    vector<AST_node* > nodes;
+    public: int size = 0;
+    public: token val;
+    public: vector<AST_node* > nodes;
     AST_node(){this -> size = 0;};
     AST_node(int s){
         this -> size = s;
@@ -191,11 +192,11 @@ int lexer(ifstream &file){
                     return line_num;
                 }
                 else if(f > 0){
-                    add_token(line_num, FLOAT, f, 0, "FLOAT");
+                    add_token(line_num, FLOAT, f, 0, "$");
                     cur += size - 1;
                 }
                 else{
-                    add_token(line_num, INT, 0, num, "INT");
+                    add_token(line_num, INT, 0, num, "$");
                     cur += size - 1;
                 }
             }
@@ -261,7 +262,11 @@ int lexer(ifstream &file){
     return 0;
 }
 
-int parser(){
+int parser(int index, AST_node* cur){
+    if(tokens[index].line == 0) cur = (AST_node* ) new AST_node(1); parser(++index, cur -> nodes[0]);
+    else if((tokens[index].type == INT || tokens[index].type == FLOAT) && tokens[index].lexeme != "$"){
+        cur -> nodes. push_back()
+    }
     return 0;
 }
 
