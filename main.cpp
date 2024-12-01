@@ -294,17 +294,15 @@ int lexer(ifstream &file){
 }
 
 int parser(int index, AST_node* cur){
-    if(tokens[index].line == 0) {
-        cur = (AST_node* )new AST_node(1); parser(++index, cur -> nodes[0]);
-        cur -> 
-    }
+    if(tokens[index].line == 0) {cur = (AST_node* )new AST_node(1, 1); parser(++index, cur -> nodes[0]);}
     else if((tokens[index].type == INT || tokens[index].type == FLOAT) && tokens[index].lexeme != "$"){
-        if(operation_priority.find(cur -> val -> ))
-        static AST_node* new_node = new AST_node(0);
-        new_node -> val = tokens[index];
-        cur -> nodes.push_back(new_node);
-        cur -> size++;
-        int re = parser(index++, cur -> nodes[0]);
+        if(operation_priority.find(cur -> val.type) == operation_priority.end()){
+            static AST_node* new_node = new AST_node(0);
+            new_node -> val = tokens[index];
+            cur -> nodes.push_back(new_node);
+            cur -> size++;
+            int re = parser(index++, cur -> nodes[0]);
+        }
     }
     return 0;
 }
