@@ -35,22 +35,13 @@ LOG_AND,                                    // &&
 LOG_OR,                                     // ||
 ASSIGN,                                     // =
 
-EOF_, DOT, SEMICOLON, BACK_BRACKET,        // EOF , ; )]}
-RET, POINT, FRONT_BRACKET, PRINT            // return . ([{ printf
+EOF_, DOT, SEMICOLON, BACK_BRACKET,         // EOF , ; )]}
+RET, POINT, FRONT_BRACKET, PRINT, START     // return . ([{ printf
 };
 
 // enum token_type {DATA, SCOP, NAME, KEYW, CALC, SYST};
 
 unordered_map<int, int> operation_priority;
-
-void operation_priority_init(){
-    int level = 0;
-    for(int i = LOG_NOT; i <= OPPO; i++){
-        if(i == MUL || i == LEFT_MOVE || i == LESS || i == EQUAL || i == AND || i == XOR || i == OR || i == LOG_AND || i == LOG_OR || i == ASSIGN) level++;
-        operation_priority[i] = level;
-        cout << i << " " << level << endl;
-    }
-}
 
 struct token{
     int line = 0;
@@ -67,9 +58,17 @@ class AST_node{
     AST_node(){this -> size = 0;};
     AST_node(int s){
         this -> size = s;
-        vector<AST_node* > t(0);
+        static vector<AST_node* > t(0);
         this -> nodes = t;
     };
+    AST_node(int s, int start){
+        this -> size = s;
+        static vector<AST_node* > (tree);
+        this -> nodes = tree;
+        static token t;
+        t.lexeme = "START";
+        t.type = START;
+    }
 };
 
 unordered_map<string, int> var_name;
@@ -77,6 +76,15 @@ unordered_map<string, int> var_name;
 vector<token> tokens;
 
 AST_node* AST_Head;
+
+void operation_priority_init(){
+    int level = 0;
+    for(int i = LOG_NOT; i <= OPPO; i++){
+        if(i == MUL || i == LEFT_MOVE || i == LESS || i == EQUAL || i == AND || i == XOR || i == OR || i == LOG_AND || i == LOG_OR || i == ASSIGN) level++;
+        operation_priority[i] = level;
+        cout << i << " " << level << endl;
+    }
+}
 
 string get_this_word(string &s, int cur){
     int len = s.size();
@@ -136,11 +144,9 @@ int get_next_num(float& f, string line, int cur, int& size){
 }
 
 int lexer(ifstream &file){
-    
     string line;
     int line_num = 1;
     bool next_line = false;
-    add_token(0, EOF_, 0, 0, "");
     while(getline(file, line)){
         int len = line.size();
         for(int cur = 0; cur < len; cur++){
@@ -288,15 +294,12 @@ int lexer(ifstream &file){
 }
 
 int parser(int index, AST_node* cur){
-    if(tokens[index].line == 0) {cur = (AST_node* )new AST_node(1); parser(++index, cur -> nodes[0]);}
-    else if((tokens[index].type == INT || tokens[index].type == FLOAT) && tokens[index].lexeme != "$"){
-        static AST_node* new_node = new AST_node(0);
-        new_node -> val = tokens[index];
-        cur -> nodes.push_back(new_node);
-        cur -> size++;
-        int re = parser(index++, cur -> nodes[0]);
+    if(tokens[index].line == 0) {
+        cur = (AST_node* )new AST_node(1); parser(++index, cur -> nodes[0]);
+        cur -> 
     }
-    else if(tokens[index].type == ASSIGN){
+    else if((tokens[index].type == INT || tokens[index].type == FLOAT) && tokens[index].lexeme != "$"){
+        if(operation_priority.find(cur -> val -> ))
         static AST_node* new_node = new AST_node(0);
         new_node -> val = tokens[index];
         cur -> nodes.push_back(new_node);
