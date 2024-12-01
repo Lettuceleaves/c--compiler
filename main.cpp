@@ -301,10 +301,21 @@ int parser(int index, AST_node* cur){
             new_node -> val = tokens[index];
             cur -> nodes.push_back(new_node);
             cur -> size++;
-            int re = parser(index++, cur -> nodes[0]);
+            int err = parser(index++, cur -> nodes[0]);
+            if(err) return 1;
         }
         else{
+            static AST_node* new_node = new AST_node(0);
+            new_node -> val = cur -> val;
+            cur -> val = tokens[index];
+            cur -> nodes.push_back(new_node);
+            cur -> size++;
+            int err = parser(index++, cur -> nodes[0]);
+            if(err) return 1;
         }
+    }
+    else if(tokens[index].type == SEMICOLON){
+        return 0;
     }
     return 0;
 }
