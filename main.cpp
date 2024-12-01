@@ -14,17 +14,43 @@ bool mode_code = false;
 bool mode_token = false;
 bool mode_ast = false;
 
-enum token_type {   INT, FLOAT, CHAR, STRING,   // data type
-                    IF, ELSE, ELSE_IF, WHILE, EQUAL,
-                    GRATER, GRATER_EQUAL, LESS, LESS_EQUAL,
-                    LOG_AND, LOG_OR, LOG_NOT_EQUAL, LOG_NOT,    // logic control
-                    AND, OR, XOR, LEFT_MOVE, RIGHT_MOVE, ADD,
-                    SUB, ASSIGN, DIV, MUL, MOD, QUES, OPPO, NOT, 
-                    CONST, RET, EOF_, SEMICOLON, DOT, 
-                    SINGLE_QUOT, DOUBLE_QUOT, POINT,
-                    FRONT_BRACKET, BACK_BRACKET, PRINT};    // others
+// enum token_type {
+//                     CONST, RET, EOF_, SEMICOLON, DOT, 
+//                     SINGLE_QUOT, DOUBLE_QUOT, POINT,
+//                     FRONT_BRACKET, BACK_BRACKET, PRINT};    // others
+
+enum token_type {
+INT, FLOAT, CHAR, STRING,
+IF, ELSE, ELSE_IF, WHILE,
+
+LOG_NOT, OPPO,                              // ! ~
+MUL, DIV, MOD, ADD, SUB,                    // * / % + -
+LEFT_MOVE, RIGHT_MOVE,                      // << >>
+LESS, LESS_EQUAL, GREATER, GREATER_EQUAL,   // < <= > >= 
+EQUAL, NOT,                                 // == !=
+AND,                                        // &
+XOR,                                        // ^
+OR,                                         // |
+LOG_AND,                                    // &&
+LOG_OR,                                     // ||
+ASSIGN,                                     // =
+
+EOF_, DOT, SEMICOLON, BACK_BRACKET,        // EOF , ; )]}
+RET, POINT, FRONT_BRACKET, PRINT            // return . ([{ printf
+};
 
 // enum token_type {DATA, SCOP, NAME, KEYW, CALC, SYST};
+
+unordered_map<int, int> operation_priority;
+
+void operation_priority_init(){
+    int level = 0;
+    for(int i = LOG_NOT; i <= OPPO; i++){
+        if(i == MUL || i == LEFT_MOVE || i == LESS || i == EQUAL || i == AND || i == XOR || i == OR || i == LOG_AND || i == LOG_OR || i == ASSIGN) level++;
+        operation_priority[i] = level;
+        cout << i << " " << level << endl;
+    }
+}
 
 struct token{
     int line = 0;
@@ -220,9 +246,9 @@ int lexer(ifstream &file){
             else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '<') {add_token(line_num, LESS_EQUAL, 0, 0, "<="); cur++;}
             else if(cur + 1 < len && line[cur + 1] == '<' && line[cur] == '<') {add_token(line_num, LEFT_MOVE, 0, 0, "<<"); cur++;}
             else if(line[cur] == '<') add_token(line_num, LESS, 0, 0, "<");
-            else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '>') {add_token(line_num, GRATER_EQUAL, 0, 0, ">="); cur++;}
+            else if(cur + 1 < len && line[cur + 1] == '=' && line[cur] == '>') {add_token(line_num, GREATER_EQUAL, 0, 0, ">="); cur++;}
             else if(cur + 1 < len && line[cur + 1] == '>' && line[cur] == '>') {add_token(line_num, RIGHT_MOVE, 0, 0, ">>"); cur++;}
-            else if(line[cur] == '>') add_token(line_num, GRATER, 0, 0, ">");
+            else if(line[cur] == '>') add_token(line_num, GREATER, 0, 0, ">");
             else if(line[cur] == '\"') {
                 for(int i = cur + 2; i < len - 1; i++){
                     if(line[i] == '\"'){ 
@@ -249,7 +275,6 @@ int lexer(ifstream &file){
             else if(line[cur] == '^') add_token(line_num, XOR, 0, 0, "^");
             else if(line[cur] == '~') add_token(line_num, OPPO, 0, 0, "~");
             else if(line[cur] == '%') add_token(line_num, MOD, 0, 0, "%");
-            else if(line[cur] == '?') add_token(line_num, QUES, 0, 0, "?");
             else if(line[cur] == ';') add_token(line_num, SEMICOLON, 0, 0, ";");
             else{
                 cout << "Error happened in char:\t" << cur << endl;
@@ -265,6 +290,13 @@ int lexer(ifstream &file){
 int parser(int index, AST_node* cur){
     if(tokens[index].line == 0) {cur = (AST_node* )new AST_node(1); parser(++index, cur -> nodes[0]);}
     else if((tokens[index].type == INT || tokens[index].type == FLOAT) && tokens[index].lexeme != "$"){
+        static AST_node* new_node = new AST_node(0);
+        new_node -> val = tokens[index];
+        cur -> nodes.push_back(new_node);
+        cur -> size++;
+        int re = parser(index++, cur -> nodes[0]);
+    }
+    else if(tokens[index].type == ASSIGN){
         static AST_node* new_node = new AST_node(0);
         new_node -> val = tokens[index];
         cur -> nodes.push_back(new_node);
@@ -343,6 +375,7 @@ int main(int argc, char* argv[]) {
 
     // build parser
 
+    operation_priority_init();
     int parser_err = parser(0, AST_Head);
 
     if(parser_err) return -1;
