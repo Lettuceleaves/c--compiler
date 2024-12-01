@@ -302,7 +302,7 @@ int parser(int index, AST_node* cur){
             cur -> nodes.push_back(new_node);
             cur -> size++;
             int err = parser(index++, cur -> nodes[0]);
-            if(err) return 1;
+            if(err) return index;
         }
         else{
             static AST_node* new_node = new AST_node(0);
@@ -311,7 +311,7 @@ int parser(int index, AST_node* cur){
             cur -> nodes.push_back(new_node);
             cur -> size++;
             int err = parser(index++, cur -> nodes[0]);
-            if(err) return 1;
+            if(err) return index;
         }
     }
     else if(tokens[index].type == SEMICOLON){
@@ -392,7 +392,7 @@ int main(int argc, char* argv[]) {
     operation_priority_init();
     int parser_err = parser(0, AST_Head);
 
-    if(parser_err) return -1;
+    if(parser_err) {cout << "Error happened in parser, when analyse the " << parser_err << "th node\nwhilch in " << tokens[parser_err].line << endl; return -1;}
     else cout << "Parser runs successfully" << endl << endl;
 
     // print ast tree if choose the mode
