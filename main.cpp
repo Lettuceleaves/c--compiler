@@ -263,9 +263,13 @@ int lexer(ifstream &file){
 }
 
 int parser(int index, AST_node* cur){
-    if(tokens[index].line == 0) cur = (AST_node* ) new AST_node(1); parser(++index, cur -> nodes[0]);
+    if(tokens[index].line == 0) {cur = (AST_node* )new AST_node(1); parser(++index, cur -> nodes[0]);}
     else if((tokens[index].type == INT || tokens[index].type == FLOAT) && tokens[index].lexeme != "$"){
-        cur -> nodes. push_back()
+        static AST_node* new_node = new AST_node(0);
+        new_node -> val = tokens[index];
+        cur -> nodes.push_back(new_node);
+        cur -> size++;
+        int re = parser(index++, cur -> nodes[0]);
     }
     return 0;
 }
@@ -339,7 +343,7 @@ int main(int argc, char* argv[]) {
 
     // build parser
 
-    int parser_err = parser();
+    int parser_err = parser(0, AST_Head);
 
     if(parser_err) return -1;
     else cout << "Parser runs successfully" << endl << endl;
