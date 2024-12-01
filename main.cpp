@@ -20,7 +20,7 @@ bool mode_ast = false;
 //                     FRONT_BRACKET, BACK_BRACKET, PRINT};    // others
 
 enum token_type {
-INT, FLOAT, CHAR, STRING,
+INT, FLOAT, CHAR, STRING, CONST,
 IF, ELSE, ELSE_IF, WHILE,
 
 LOG_NOT, OPPO,                              // ! ~
@@ -224,11 +224,11 @@ int lexer(ifstream &file){
                     return line_num;
                 }
                 else if(f > 0){
-                    add_token(line_num, FLOAT, f, 0, "$");
+                    add_token(line_num, CONST, f, 0, "FLOAT");
                     cur += size - 1;
                 }
                 else{
-                    add_token(line_num, INT, 0, num, "$");
+                    add_token(line_num, INT, CONST, num, "INT");
                     cur += size - 1;
                 }
             }
@@ -265,7 +265,7 @@ int lexer(ifstream &file){
                 }
             }
             else if(line[cur] == '\''){
-                add_token(line_num, CHAR, 0, (int)(line[cur + 1]), "CHAR");
+                add_token(line_num, CONST, 0, (int)(line[cur + 1]), "CHAR");
                 cur += 2;
             }
             else if(line[cur] == '(') add_token(line_num, FRONT_BRACKET, 0, 0, "(");
@@ -295,13 +295,15 @@ int lexer(ifstream &file){
 
 int parser(int index, AST_node* cur){
     if(tokens[index].line == 0) {cur = (AST_node* )new AST_node(1, 1); parser(++index, cur -> nodes[0]);}
-    else if((tokens[index].type == INT || tokens[index].type == FLOAT) && tokens[index].lexeme != "$"){
-        if(operation_priority.find(cur -> val.type) == operation_priority.end()){
+    else if(tokens[index].type == CONST || tokens[index].type == LOG_NOT || tokens[index].type == OPPO || tokens[index].type == MUL || tokens[index].type == DIV || tokens[index].type == MOD || tokens[index].type == ADD || tokens[index].type == SUB || tokens[index].type == LEFT_MOVE || tokens[index].type == RIGHT_MOVE || tokens[index].type == LESS || tokens[index].type == LESS_EQUAL || tokens[index].type == GREATER || tokens[index].type == GREATER_EQUAL || tokens[index].type == EQUAL || tokens[index].type == NOT || tokens[index].type == AND || tokens[index].type == AND || tokens[index].type == XOR || tokens[index].type == OR || tokens[index].type == LOG_AND || tokens[index].type == LOG_OR || tokens[index].type == ASSIGN){
+        if(operation_priority.find(cur -> val.type) == operation_priority.end() || operation_priority[cur -> val.type] <= operation_priority[tokens[index].type]){
             static AST_node* new_node = new AST_node(0);
             new_node -> val = tokens[index];
             cur -> nodes.push_back(new_node);
             cur -> size++;
             int re = parser(index++, cur -> nodes[0]);
+        }
+        else{
         }
     }
     return 0;
