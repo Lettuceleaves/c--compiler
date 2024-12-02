@@ -346,31 +346,35 @@ int lexer(ifstream &file){
     return 0;
 }
 
+// int parser(int index, AST_node* cur){
+//     if(tokens[index].line == 0) {cur = (AST_node* )new AST_node(1, 1); parser(++index, cur -> nodes[0]);}
+//     else if(tokens[index].type == CONST || tokens[index].type == LOG_NOT || tokens[index].type == OPPO || tokens[index].type == MUL || tokens[index].type == DIV || tokens[index].type == MOD || tokens[index].type == ADD || tokens[index].type == SUB || tokens[index].type == LEFT_MOVE || tokens[index].type == RIGHT_MOVE || tokens[index].type == LESS || tokens[index].type == LESS_EQUAL || tokens[index].type == GREATER || tokens[index].type == GREATER_EQUAL || tokens[index].type == EQUAL || tokens[index].type == NOT || tokens[index].type == AND || tokens[index].type == AND || tokens[index].type == XOR || tokens[index].type == OR || tokens[index].type == LOG_AND || tokens[index].type == LOG_OR || tokens[index].type == ASSIGN){
+//         if(operation_priority.find(cur -> val.type) == operation_priority.end() || operation_priority[cur -> val.type] <= operation_priority[tokens[index].type]){
+//             static AST_node* new_node = new AST_node(0);
+//             new_node -> val = tokens[index];
+//             cur -> nodes.push_back(new_node);
+//             cur -> size++;
+//             int err = parser(index++, cur -> nodes[cur -> size - 1]);
+//             if(err) return index;
+//         }
+//         else{
+//             static AST_node* new_node = new AST_node(0);
+//             new_node -> val = cur -> val;
+//             cur -> val = tokens[index];
+//             cur -> nodes.push_back(new_node);
+//             cur -> size++;
+//             int err = parser(index++, cur -> nodes[0]);
+//             if(err) return index;
+//         }
+//     }
+//     else if(tokens[index].type == SEMICOLON){
+//         return 0;
+//     }
+//     return 0;
+// }
+
 int parser(int index, AST_node* cur){
-    if(tokens[index].line == 0) {cur = (AST_node* )new AST_node(1, 1); parser(++index, cur -> nodes[0]);}
-    else if(tokens[index].type == CONST || tokens[index].type == LOG_NOT || tokens[index].type == OPPO || tokens[index].type == MUL || tokens[index].type == DIV || tokens[index].type == MOD || tokens[index].type == ADD || tokens[index].type == SUB || tokens[index].type == LEFT_MOVE || tokens[index].type == RIGHT_MOVE || tokens[index].type == LESS || tokens[index].type == LESS_EQUAL || tokens[index].type == GREATER || tokens[index].type == GREATER_EQUAL || tokens[index].type == EQUAL || tokens[index].type == NOT || tokens[index].type == AND || tokens[index].type == AND || tokens[index].type == XOR || tokens[index].type == OR || tokens[index].type == LOG_AND || tokens[index].type == LOG_OR || tokens[index].type == ASSIGN){
-        if(operation_priority.find(cur -> val.type) == operation_priority.end() || operation_priority[cur -> val.type] <= operation_priority[tokens[index].type]){
-            static AST_node* new_node = new AST_node(0);
-            new_node -> val = tokens[index];
-            cur -> nodes.push_back(new_node);
-            cur -> size++;
-            int err = parser(index++, cur -> nodes[cur -> size - 1]);
-            if(err) return index;
-        }
-        else{
-            static AST_node* new_node = new AST_node(0);
-            new_node -> val = cur -> val;
-            cur -> val = tokens[index];
-            cur -> nodes.push_back(new_node);
-            cur -> size++;
-            int err = parser(index++, cur -> nodes[0]);
-            if(err) return index;
-        }
-    }
-    else if(tokens[index].type == SEMICOLON){
-        return 0;
-    }
-    return 0;
+    
 }
 
 int main(int argc, char* argv[]) {
