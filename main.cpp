@@ -54,26 +54,24 @@ struct token{
     int type = -1;
     float float_val = 0;
     int int_val = 0;
-    string lexeme = "";
+    string lexeme;
 };
 
 class AST_node{
-    public: int size = 0;
-    public: token val;
-    public: vector<AST_node* > nodes;
-    AST_node(){this -> size = 0;};
-    AST_node(int s){
-        this -> size = s;
-        static vector<AST_node* > t(s);
-        this -> nodes = t;
-    };
-    AST_node(int s, int start){
-        this -> size = s;
-        static vector<AST_node* > (tree);
-        this -> nodes = tree;
-        static token t;
-        t.lexeme = "START";
-        t.type = START;
+public: 
+    int size = 0;
+    token val;
+    vector<AST_node* > nodes;
+    AST_node() : size(0){
+        nodes.reserve(size);
+    }
+    AST_node(int s) : size(s){
+        nodes.reserve(size);
+    }
+    AST_node(int s, int start) : size(s){
+        val.lexeme = "START";
+        val.type = START;
+        nodes.reserve(size);
     }
 };
 
@@ -389,9 +387,15 @@ int lexer(ifstream &file){
 // }
 
 int parser(AST_node* cur_head){
-    if(parser_index == -1) {cur_head = (AST_node* )new AST_node(1, 1); parser_index++; parser(cur_head -> nodes[0]);}
+    if(parser_index == -1) {
+        cur_head = (AST_node* )new AST_node(1, 1);
+        // cout << cur_head->val.lexeme << endl;
+        parser_index++; 
+        parser(cur_head);
+    }
     else if(operator_checker(tokens[parser_index]) == -2){
-        static AST_node* new_node = new AST_node(0);
+        // cout << 111 << endl;
+        AST_node* new_node = new AST_node(0);
         new_node -> val = tokens[parser_index];
         cur_head -> nodes.push_back(new_node);
         cur_head -> size++;
@@ -461,7 +465,7 @@ int main(int argc, char* argv[]) {
             mode_token = true;
             mode_ast = true;
         }
-        else cout << " Please enter in valid format" << endl;
+        else {cout << " Please enter in valid format" << endl; return 1;}
     }
     else {
         cout << "Please do not input more than three arguments" << endl;

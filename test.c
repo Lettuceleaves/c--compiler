@@ -1,1 +1,1 @@
-int a;
+while{while{}};
