@@ -196,6 +196,19 @@ int get_next_num(float& f, string line, int cur, int& size){
     }
 }
 
+int operator_checker(token &t){
+    int type = t.type;
+    if(type == INT || type == FLOAT || type == CHAR || type == STRING || type == CONST) return -1;
+    else if(type == IF || type == WHILE || type== ELSE_IF || WHILE) return -2;
+    else if(type == ASSIGN || type == LOG_OR || type == LOG_AND || type == OR || type == XOR || type == AND && type == EQUAL || type == NOT || type == LESS || type == LESS_EQUAL || type == GREATER || type == GREATER_EQUAL || type == LEFT_MOVE || type == RIGHT_MOVE || type == ADD || type == SUB || type == MUL || type == DIV || type == MOD){
+        return 2;
+    }
+    else if(type == LOG_NOT || type == OPPO){
+        return 1;
+    }
+    else return 0;
+}
+
 int lexer(ifstream &file){
     string line;
     int line_num = 1;
@@ -373,8 +386,8 @@ int lexer(ifstream &file){
 //     return 0;
 // }
 
-int parser(int index, AST_node* cur){
-    
+int parser(AST_node* cur_head, int index){
+    if(tokens[index].line == 0) {cur_head = (AST_node* )new AST_node(1, 1); parser(cur_head -> nodes[0], ++index);}
 }
 
 int main(int argc, char* argv[]) {
@@ -452,7 +465,7 @@ int main(int argc, char* argv[]) {
     // build parser
 
     operation_priority_init();
-    int parser_err = parser(0, AST_Head);
+    int parser_err = parser(AST_Head, 0);
 
     if(parser_err) {cout << "Error happened in parser, when analyse the " << parser_err << "th node\nwhilch in " << tokens[parser_err].line << endl; return -1;}
     else cout << "Parser runs successfully" << endl << endl;
