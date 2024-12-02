@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stack>
 #include <vector>
+#include <queue>
 #include <string>
 #include <algorithm>
 #include <fstream>
@@ -20,28 +21,33 @@ bool mode_ast = false;
 //                     FRONT_BRACKET, BACK_BRACKET, PRINT};    // others
 
 enum token_type {
-INT, FLOAT, CHAR, STRING, CONST,
 IF, ELSE, ELSE_IF, WHILE,
 
-LOG_NOT, OPPO,                              // ! ~
-MUL, DIV, MOD, ADD, SUB,                    // * / % + -
-LEFT_MOVE, RIGHT_MOVE,                      // << >>
-LESS, LESS_EQUAL, GREATER, GREATER_EQUAL,   // < <= > >= 
-EQUAL, NOT,                                 // == !=
-AND,                                        // &
-XOR,                                        // ^
-OR,                                         // |
-LOG_AND,                                    // &&
-LOG_OR,                                     // ||
 ASSIGN,                                     // =
+LOG_OR,                                     // ||
+LOG_AND,                                    // &&
+OR,                                         // |
+XOR,                                        // ^
+AND,                                        // &
+EQUAL, NOT,                                 // == !=
+LESS, LESS_EQUAL, GREATER, GREATER_EQUAL,   // < <= > >= 
+LEFT_MOVE, RIGHT_MOVE,                      // << >>
+ADD, SUB,                                   // + -
+MUL, DIV, MOD,                              // * / %
+LOG_NOT, OPPO,                              // ! ~
+INT, FLOAT, CHAR, STRING, CONST,
 
 EOF_, DOT, SEMICOLON, BACK_BRACKET,         // EOF , ; )]}
 RET, POINT, FRONT_BRACKET, PRINT, START     // return . ([{ printf
 };
 
+int enum_size = START + 1;
+
 // enum token_type {DATA, SCOP, NAME, KEYW, CALC, SYST};
 
 unordered_map<int, int> operation_priority;
+
+unordered_map<int, string> enum_name_list;
 
 struct token{
     int line = 0;
@@ -77,12 +83,59 @@ vector<token> tokens;
 
 AST_node* AST_Head;
 
+
+void fill_int_enum_name_list(){
+    for(int i = 0; i < enum_size; i++){
+        switch(i){
+            case INT: enum_name_list[i] = "INT"; break;
+            case FLOAT: enum_name_list[i] = "FLOAT"; break;
+            case CHAR: enum_name_list[i] = "CHAR"; break;
+            case STRING: enum_name_list[i] = "STRING"; break;
+            case CONST: enum_name_list[i] = "CONST"; break;
+            case IF: enum_name_list[i] = "IF"; break;
+            case ELSE: enum_name_list[i] = "ELSE"; break;
+            case ELSE_IF: enum_name_list[i] = "ELSE_IF"; break;
+            case WHILE: enum_name_list[i] = "WHILE"; break;
+            case LOG_NOT: enum_name_list[i] = "LOG_NOT"; break;
+            case OPPO: enum_name_list[i] = "OPPO"; break;
+            case MUL: enum_name_list[i] = "MUL"; break;
+            case DIV: enum_name_list[i] = "DIV"; break;
+            case MOD: enum_name_list[i] = "MOD"; break;
+            case ADD: enum_name_list[i] = "ADD"; break;
+            case SUB: enum_name_list[i] = "SUB"; break;
+            case LEFT_MOVE: enum_name_list[i] = "LEFT_MOVE"; break;
+            case RIGHT_MOVE: enum_name_list[i] = "RIGHT_MOVE"; break;
+            case LESS: enum_name_list[i] = "LESS"; break;
+            case LESS_EQUAL: enum_name_list[i] = "LESS_EQUAL"; break;
+            case GREATER: enum_name_list[i] = "GREATER"; break;
+            case GREATER_EQUAL: enum_name_list[i] = "GREATER_EQUAL"; break;
+            case EQUAL: enum_name_list[i] = "EQUAL"; break;
+            case NOT: enum_name_list[i] = "NOT"; break;
+            case AND: enum_name_list[i] = "AND"; break;
+            case XOR: enum_name_list[i] = "XOR"; break;
+            case OR: enum_name_list[i] = "OR"; break;
+            case LOG_AND: enum_name_list[i] = "LOG_AND"; break;
+            case LOG_OR: enum_name_list[i] = "LOG_OR"; break;
+            case ASSIGN: enum_name_list[i] = "ASSIGN"; break;
+            case EOF_: enum_name_list[i] = "EOF_"; break;
+            case DOT: enum_name_list[i] = "DOT"; break;
+            case SEMICOLON: enum_name_list[i] = "SEMICOLON"; break;
+            case BACK_BRACKET: enum_name_list[i] = "BACK_BRACKET"; break;
+            case RET: enum_name_list[i] = "RET"; break;
+            case POINT: enum_name_list[i] = "POINT"; break;
+            case FRONT_BRACKET: enum_name_list[i] = "FRONT_BRACKET"; break;
+            case PRINT: enum_name_list[i] = "PRINT"; break;
+            case START: enum_name_list[i] = "START"; break;
+            default: cout << "error" << endl;
+        }
+    }
+}
+
 void operation_priority_init(){
     int level = 0;
-    for(int i = LOG_NOT; i <= OPPO; i++){
-        if(i == MUL || i == LEFT_MOVE || i == LESS || i == EQUAL || i == AND || i == XOR || i == OR || i == LOG_AND || i == LOG_OR || i == ASSIGN) level++;
+    for(int i = LOG_NOT; i <= CONST; i++){
+        if(i == MUL || i == ADD || i == LEFT_MOVE || i == LESS || i == EQUAL || i == AND || i == XOR || i == OR || i == LOG_AND || i == LOG_OR || i == ASSIGN || i == INT) level++;
         operation_priority[i] = level;
-        cout << i << " " << level << endl;
     }
 }
 
@@ -301,7 +354,7 @@ int parser(int index, AST_node* cur){
             new_node -> val = tokens[index];
             cur -> nodes.push_back(new_node);
             cur -> size++;
-            int err = parser(index++, cur -> nodes[0]);
+            int err = parser(index++, cur -> nodes[cur -> size - 1]);
             if(err) return index;
         }
         else{
@@ -360,6 +413,10 @@ int main(int argc, char* argv[]) {
             mode_asm = true;
             mode_code = true;
         }
+        else if(args[2] == "-showtoken" && args[3] == "-showast"){
+            mode_token = true;
+            mode_ast = true;
+        }
         else cout << " Please enter in valid format" << endl;
     }
     else {
@@ -385,7 +442,8 @@ int main(int argc, char* argv[]) {
 
     // print tokens if choose the mode
 
-    if(mode_token) for(token t : tokens) cout << "token line: "<< t.line << "\ttoken type: " << t.type << "\ttoken float_val: " << t.float_val << "\ttoken int_val: " << t.int_val << "\ttoken lexeme: " << t.lexeme << endl;
+    fill_int_enum_name_list();
+    if(mode_token) for(token t : tokens) cout << "token line: "<< t.line << "\ttoken type: " << t.type << "\ttoken float_val: " << t.float_val << "\ttoken int_val: " << t.int_val << "\ttoken lexeme: " << t.lexeme << "\t\ttoken type: " << enum_name_list[t.type] << endl;
 
     // build parser
 
@@ -397,7 +455,28 @@ int main(int argc, char* argv[]) {
 
     // print ast tree if choose the mode
 
-    if(mode_ast) cout << "unsupport" << endl << endl;
+    if(mode_ast){
+        fill_int_enum_name_list();
+        queue<pair<AST_node*, int>> q;
+        vector<pair<AST_node*, int>> Ast_Nodes;
+        q.push({AST_Head, 0});
+        while(!q.empty()){
+            auto [cur, level] = q.front(); q.pop();
+            Ast_Nodes.push_back({cur, level});
+            for(int i = 0; i < cur -> size; i++){
+                q.push({cur -> nodes[i], level + 1});
+            }
+        }
+        int cout_level = 0;
+        for(auto [cur, level] : Ast_Nodes){
+            if(level != cout_level){
+                cout << endl;
+                cout_level = level;
+            }
+            cout << "[" << enum_name_list[cur -> val.type] << ", " << cur -> val.lexeme << "] ";
+        }
+        cout << endl;
+    }
 
     // safe exit
 
