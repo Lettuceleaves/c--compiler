@@ -64,7 +64,7 @@ class AST_node{
     AST_node(){this -> size = 0;};
     AST_node(int s){
         this -> size = s;
-        static vector<AST_node* > t(0);
+        static vector<AST_node* > t(s);
         this -> nodes = t;
     };
     AST_node(int s, int start){
@@ -82,6 +82,8 @@ unordered_map<string, int> var_name;
 vector<token> tokens;
 
 AST_node* AST_Head;
+
+int parser_index = -1;
 
 
 void fill_int_enum_name_list(){
@@ -386,8 +388,33 @@ int lexer(ifstream &file){
 //     return 0;
 // }
 
-int parser(AST_node* cur_head, int index){
-    if(tokens[index].line == 0) {cur_head = (AST_node* )new AST_node(1, 1); parser(cur_head -> nodes[0], ++index);}
+int parser(AST_node* cur_head){
+    if(parser_index == -1) {cur_head = (AST_node* )new AST_node(1, 1); parser_index++; parser(cur_head -> nodes[0]);}
+    else if(operator_checker(tokens[parser_index]) == -2){
+        static AST_node* new_node = new AST_node(0);
+        new_node -> val = tokens[parser_index];
+        cur_head -> nodes.push_back(new_node);
+        cur_head -> size++;
+        if(tokens[parser_index + 1].lexeme[0] != '{'){
+            parser_index++;
+            int err = parser(new_node);
+            if(err) return parser_index;
+            return 0;
+        }
+        else{
+            int save_index = parser_index + 1;
+            parser_index += 2;
+            while(tokens[parser_index].lexeme[0] != '}'){
+                if(tokens[parser_index].type == EOF_) return save_index;
+                int err = parser(new_node);
+                if(err) return parser_index;
+            }
+            parser_index++;
+            return 0;
+        }
+    }
+    else{
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -465,7 +492,7 @@ int main(int argc, char* argv[]) {
     // build parser
 
     operation_priority_init();
-    int parser_err = parser(AST_Head, 0);
+    int parser_err = parser(AST_Head);
 
     if(parser_err) {cout << "Error happened in parser, when analyse the " << parser_err << "th node\nwhilch in " << tokens[parser_err].line << endl; return -1;}
     else cout << "Parser runs successfully" << endl << endl;
