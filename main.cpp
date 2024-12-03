@@ -199,7 +199,7 @@ int get_next_num(float& f, string line, int cur, int& size){
 int operator_checker(token &t){
     int type = t.type;
     if(type == INT || type == FLOAT || type == CHAR || type == STRING || type == CONST) return -1;
-    else if(type == IF || type == WHILE || type== ELSE_IF || WHILE) return -2;
+    else if(type == IF || type == WHILE || type == ELSE_IF || type == WHILE) return -2;
     else if(type == ASSIGN || type == LOG_OR || type == LOG_AND || type == OR || type == XOR || type == AND && type == EQUAL || type == NOT || type == LESS || type == LESS_EQUAL || type == GREATER || type == GREATER_EQUAL || type == LEFT_MOVE || type == RIGHT_MOVE || type == ADD || type == SUB || type == MUL || type == DIV || type == MOD){
         return 2;
     }
@@ -388,13 +388,11 @@ int lexer(ifstream &file){
 
 int parser(AST_node* &cur_head){
     if(parser_index == -1) {
-        cur_head = (AST_node* )new AST_node(1, 1);
-        cout << cur_head->val.lexeme << endl;
-        parser_index++; 
+        cur_head = (AST_node* )new AST_node(0, 1);
+        parser_index++;
         parser(cur_head);
     }
     else if(operator_checker(tokens[parser_index]) == -2){
-        // cout << 111 << endl;
         AST_node* new_node = new AST_node(0);
         new_node -> val = tokens[parser_index];
         cur_head -> nodes.push_back(new_node);
@@ -511,10 +509,8 @@ int main(int argc, char* argv[]) {
         while(!q.empty()){
             auto [cur, level] = q.front(); q.pop();
             Ast_Nodes.push_back({cur, level});
-            cout << cur -> size << endl;
             for(int i = 0; i < cur -> size; i++){
                 if(cur -> nodes[i]) q.push({cur -> nodes[i], level + 1});
-                cout << 111 << endl;
             }
         }
         int cout_level = 0;
