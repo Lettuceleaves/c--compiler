@@ -509,6 +509,7 @@ int main(int argc, char* argv[]) {
         while(!q.empty()){
             auto [cur, level] = q.front(); q.pop();
             Ast_Nodes.push_back({cur, level});
+            cout << cur -> size << endl;
             for(int i = 0; i < cur -> size; i++){
                 if(cur -> nodes[i]) q.push({cur -> nodes[i], level + 1});
             }
