@@ -386,10 +386,10 @@ int lexer(ifstream &file){
 //     return 0;
 // }
 
-int parser(AST_node* cur_head){
+int parser(AST_node* &cur_head){
     if(parser_index == -1) {
         cur_head = (AST_node* )new AST_node(1, 1);
-        // cout << cur_head->val.lexeme << endl;
+        cout << cur_head->val.lexeme << endl;
         parser_index++; 
         parser(cur_head);
     }
@@ -419,6 +419,7 @@ int parser(AST_node* cur_head){
     }
     else{
     }
+    return 0;
 }
 
 int main(int argc, char* argv[]) {
@@ -504,15 +505,16 @@ int main(int argc, char* argv[]) {
     // print ast tree if choose the mode
 
     if(mode_ast){
-        fill_int_enum_name_list();
         queue<pair<AST_node*, int>> q;
         vector<pair<AST_node*, int>> Ast_Nodes;
         q.push({AST_Head, 0});
         while(!q.empty()){
             auto [cur, level] = q.front(); q.pop();
             Ast_Nodes.push_back({cur, level});
+            cout << cur -> size << endl;
             for(int i = 0; i < cur -> size; i++){
-                q.push({cur -> nodes[i], level + 1});
+                if(cur -> nodes[i]) q.push({cur -> nodes[i], level + 1});
+                cout << 111 << endl;
             }
         }
         int cout_level = 0;
