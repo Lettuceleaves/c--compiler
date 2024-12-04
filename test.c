@@ -1,5 +1,4 @@
-while {
-while{}
-while{}
-while{}
+for(while(){}while(){}while(){}){
+	while(){}
+	while(){}
 }

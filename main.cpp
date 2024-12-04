@@ -21,7 +21,7 @@ bool mode_ast = false;
 //                     FRONT_BRACKET, BACK_BRACKET, PRINT};    // others
 
 enum token_type {
-IF, ELSE, ELSE_IF, WHILE,
+IF, ELSE, ELSE_IF, WHILE, FOR,
 
 ASSIGN,                                     // =
 LOG_OR,                                     // ||
@@ -153,6 +153,7 @@ string get_this_word(string &s, int cur){
 }
 
 void add_token(int line, int type, int float_val, int int_val, string lexeme){
+    if(type == FOR) cout << "!!!!!!!!!!!!" << endl;
     token t;
     t.line = line;
     t.type = type;
@@ -199,7 +200,8 @@ int get_next_num(float& f, string line, int cur, int& size){
 int operator_checker(token &t){
     int type = t.type;
     if(type == INT || type == FLOAT || type == CHAR || type == STRING || type == CONST) return -1;
-    else if(type == IF || type == WHILE || type == ELSE_IF || type == WHILE) return -2;
+    else if(type == IF || type == WHILE || type == ELSE_IF || type == WHILE || type == FOR) return -2;
+    else if(type == ELSE) return -3;
     else if(type == ASSIGN || type == LOG_OR || type == LOG_AND || type == OR || type == XOR || type == AND && type == EQUAL || type == NOT || type == LESS || type == LESS_EQUAL || type == GREATER || type == GREATER_EQUAL || type == LEFT_MOVE || type == RIGHT_MOVE || type == ADD || type == SUB || type == MUL || type == DIV || type == MOD){
         return 2;
     }
@@ -238,6 +240,10 @@ int lexer(ifstream &file){
                 }
                 else if(word == "if"){
                     add_token(line_num, IF, 0, 0, word);
+                    cur += word.size() - 1;
+                }
+                else if(word == "for"){
+                    add_token(line_num, FOR, 0, 0, word);
                     cur += word.size() - 1;
                 }
                 else if(word == "else" && get_this_word(line, cur + 5) == "if"){
@@ -397,6 +403,13 @@ int parser(AST_node* &cur_head){
         new_node -> val = tokens[parser_index];
         cur_head -> nodes.push_back(new_node);
         cur_head -> size++;
+        parser_index += 2;
+        parser(new_node);
+        parser_index++;
+        if(tokens[parser_index].type == FOR){
+            parser(new_node);
+            parser(new_node);
+        }
         if(tokens[parser_index + 1].lexeme[0] != '{'){
             parser_index++;
             int err = parser(new_node);
@@ -414,6 +427,13 @@ int parser(AST_node* &cur_head){
             parser_index++;
             return 0;
         }
+    }
+    else if(operator_checker(tokens[parser_index]) == -3){
+        AST_node* new_node = new AST_node(0);
+        new_node -> val = tokens[parser_index];
+        cur_head -> nodes.push_back(new_node);
+        cur_head -> size++;
+        parser(new_node);
     }
     else{
     }
@@ -503,7 +523,6 @@ int main(int argc, char* argv[]) {
     // print ast tree if choose the mode
 
     if(mode_ast){
-        int a;
         queue<pair<AST_node*, int>> q;
         vector<pair<AST_node*, int>> Ast_Nodes;
         q.push({AST_Head, 0});
