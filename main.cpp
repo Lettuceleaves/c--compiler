@@ -502,7 +502,8 @@ int main(int argc, char* argv[]) {
 
     // print ast tree if choose the mode
 
-    if(mode_ast){ // asa
+    if(mode_ast){
+        int a;
         queue<pair<AST_node*, int>> q;
         vector<pair<AST_node*, int>> Ast_Nodes;
         q.push({AST_Head, 0});
