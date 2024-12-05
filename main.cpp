@@ -214,9 +214,33 @@ int operator_checker(token &t){
 }
 
 AST_node* check_priority_in_tree(AST_node* cur){
-    int cur_priority = operation_priority[cur -> val.type];
-    if()
-    if(start -> )
+    int cur_priority;
+    if(cur -> val.type == FRONT_BRACKET) cur_priority = INT_MAX;
+    else cur_priority = operation_priority[cur -> val.type];
+    int token_priority;
+    if(tokens[parser_index].type == FRONT_BRACKET) token_priority = INT_MAX;
+    else token_priority = operation_priority[tokens[parser_index].type];
+
+    // if should replace cur_node
+
+    if(token_priority < cur_priority){
+        return nullptr;
+    }
+
+    // check wether cur is parent
+
+    int size = cur -> size;
+    if(size == 0) return cur;
+    else if(size == 1){
+        int left_prority = (cur -> nodes[0] -> val.type == FRONT_BRACKET) ? INT_MAX : operation_priority[cur -> nodes[0] -> val.type];
+        if(left_prority > token_priority) return cur;
+        else return check_priority_in_tree(cur -> nodes[0]);
+    }
+    else{
+        int left_prority = (cur -> nodes[0] -> val.type == FRONT_BRACKET) ? INT_MAX : operation_priority[cur -> nodes[0] -> val.type];
+        int right_prority = (cur -> nodes[1] -> val.type == FRONT_BRACKET) ? INT_MAX : operation_priority[cur -> nodes[1] -> val.type];
+        a
+    }
 }
 
 int sentence(AST_node* start, int end){
@@ -226,9 +250,29 @@ int sentence(AST_node* start, int end){
         else if(tokens[parser_index].lexeme == ")" && end == 0) return 0;
         else if(tokens[parser_index].type < ASSIGN || tokens[parser_index].type > CONST) return parser_index;
         if(tokens[parser_index].lexeme == "(" || tokens[parser_index].lexeme == "["){
+            AST_node* insert_parent_node = check_priority_in_tree(start);
             AST_node* new_node = new AST_node(0);
-            new_node -> val = tokens[parser_index]; 
-            a
+            new_node -> val = tokens[parser_index];
+            parser_index++;
+            if(tokens[parser_index].lexeme == ")" || tokens[parser_index].lexeme == "]"){
+                return parser_index;
+            }
+            int new_end;
+            if(tokens[parser_index].lexeme == "(") new_end = 0;
+            else new_end = 1;
+            int err = sentence(new_node, new_end);
+            if(err) return parser_index;
+            int parent_size = insert_parent_node -> size;
+            if(parent_size < 2){
+                insert_parent_node -> nodes.push_back(new_node);
+                insert_parent_node -> size++;
+            }
+            else if(parent_size == 2){
+                new_node -> nodes.push_back(insert_parent_node -> nodes[1]);
+                insert_parent_node -> nodes[1] = new_node;
+                new_node -> size++;
+            }
+            else return parser_index;
         }
         else{
             AST_node* insert_parent_node = check_priority_in_tree(start);
@@ -473,6 +517,7 @@ int parser(AST_node* &cur_head){
         }
         int err = sentence(new_node, end);
         if(err) return err;
+        parser_index++;
     }
     else if(cur_head != AST_Head && tokens[parser_index].type == EOF_) return parser_index;
     else{
