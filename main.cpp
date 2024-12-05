@@ -84,7 +84,7 @@ AST_node* AST_Head;
 int parser_index = -1;
 
 
-void fill_int_enum_name_list(){
+bool fill_int_enum_name_list(){
     for(int i = 0; i < enum_size; i++){
         switch(i){
             case INT: enum_name_list[i] = "INT"; break;
@@ -126,9 +126,11 @@ void fill_int_enum_name_list(){
             case FRONT_BRACKET: enum_name_list[i] = "FRONT_BRACKET"; break;
             case PRINT: enum_name_list[i] = "PRINT"; break;
             case START: enum_name_list[i] = "START"; break;
-            default: cout << "error" << endl;
+            case FOR: enum_name_list[i] = "FOR"; break;
+            default: cout << "error in function fill_int_enum_name_list()" << endl; return false;
         }
     }
+    return true;
 }
 
 void operation_priority_init(){
@@ -153,7 +155,6 @@ string get_this_word(string &s, int cur){
 }
 
 void add_token(int line, int type, int float_val, int int_val, string lexeme){
-    if(type == FOR) cout << "!!!!!!!!!!!!" << endl;
     token t;
     t.line = line;
     t.type = type;
@@ -239,8 +240,11 @@ AST_node* check_priority_in_tree(AST_node* cur){
     else{
         int left_prority = (cur -> nodes[0] -> val.type == FRONT_BRACKET) ? INT_MAX : operation_priority[cur -> nodes[0] -> val.type];
         int right_prority = (cur -> nodes[1] -> val.type == FRONT_BRACKET) ? INT_MAX : operation_priority[cur -> nodes[1] -> val.type];
-        a
+        if(left_prority <= token_priority) return check_priority_in_tree(cur -> nodes[0]);
+        else if(right_prority <= token_priority) return check_priority_in_tree(cur -> nodes[1]);
+        else return cur;
     }
+    return cur;
 }
 
 int sentence(AST_node* start, int end){
@@ -279,16 +283,23 @@ int sentence(AST_node* start, int end){
             AST_node* new_node = new AST_node(0);
             new_node -> val = tokens[parser_index];
             int parent_size = insert_parent_node -> size;
-            if(parent_size < 2){
-                insert_parent_node -> nodes.push_back(new_node);
-                insert_parent_node -> size++;
+            if(insert_parent_node){
+                if(parent_size < 2){
+                    insert_parent_node -> nodes.push_back(new_node);
+                    insert_parent_node -> size++;
+                }
+                else if(parent_size == 2){
+                    new_node -> nodes.push_back(insert_parent_node -> nodes[1]);
+                    insert_parent_node -> nodes[1] = new_node;
+                    new_node -> size++;
+                }
+                else return parser_index;
             }
-            else if(parent_size == 2){
-                new_node -> nodes.push_back(insert_parent_node -> nodes[1]);
-                insert_parent_node -> nodes[1] = new_node;
+            else{
+                new_node -> nodes.push_back(start);
+                start = new_node;
                 new_node -> size++;
             }
-            else return parser_index;
         }
         parser_index++;
     }
@@ -449,13 +460,21 @@ int lexer(ifstream &file){
     return 0;
 }
 
+int debug_counter = 0;
+
 int parser(AST_node* &cur_head){
+    cout << parser_index << endl;
+    debug_counter++;
+    if(debug_counter >= 100) return -1;
+    if(parser_index >= (int)tokens.size()) return parser_index;
     int check = operator_checker(tokens[parser_index]);
     if(parser_index == -1) {
         cur_head = (AST_node* )new AST_node(0, 1);
         parser_index++;
         while(tokens[parser_index].type != EOF){
-            parser(cur_head);
+            int err = parser(cur_head);
+            parser_index++;
+            if(err) return parser_index;
         }
         return 0;
     }
@@ -465,15 +484,18 @@ int parser(AST_node* &cur_head){
         cur_head -> nodes.push_back(new_node);
         cur_head -> size++;
         parser_index += 2;
-        parser(new_node);
+        int err = parser(new_node);
+        if(err) return parser_index;
         parser_index++;
         if(tokens[parser_index].type == FOR){
-            parser(new_node);
-            parser(new_node);
+            int err1 = parser(new_node);
+            if(err1) return parser_index;
+            int err2 = parser(new_node);
+            if(err2) return parser_index;
         }
         if(tokens[parser_index + 1].lexeme[0] != '{'){
             parser_index++;
-            int err = parser(new_node);
+            err = parser(new_node);
             if(err) return parser_index;
             return 0;
         }
@@ -482,7 +504,7 @@ int parser(AST_node* &cur_head){
             parser_index += 2;
             while(tokens[parser_index].lexeme[0] != '}'){
                 if(tokens[parser_index].type == EOF_) return save_index;
-                int err = parser(new_node);
+                err = parser(new_node);
                 if(err) return parser_index;
             }
             parser_index++;
@@ -583,7 +605,7 @@ int main(int argc, char* argv[]) {
 
     // cout code if choose the mode
 
-    if (mode_code) { string line; while (getline(input_file, line)) cout << line << endl;}
+    if (mode_code) { string line; while (getline(input_file, line)) cout << line << endl; return 0;}
 
     // lexer
 
@@ -594,7 +616,7 @@ int main(int argc, char* argv[]) {
 
     // print tokens if choose the mode
 
-    fill_int_enum_name_list();
+    if(fill_int_enum_name_list() == false) return 1;
     if(mode_token) for(token t : tokens) cout << "token line: "<< t.line << "\ttoken type: " << t.type << "\ttoken float_val: " << t.float_val << "\ttoken int_val: " << t.int_val << "\ttoken lexeme: " << t.lexeme << "\t\ttoken type: " << enum_name_list[t.type] << endl;
 
     // build parser
