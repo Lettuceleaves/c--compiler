@@ -224,8 +224,10 @@ int sentence(AST_node* start, int end){
         if(tokens[parser_index].type == SEMICOLON && end == 2) return 0;
         else if(tokens[parser_index].lexeme == "]" && end == 1) return 0;
         else if(tokens[parser_index].lexeme == ")" && end == 0) return 0;
-        else if(tokens[parser_index].val < ASSIGN || tokens[parser_index].val > CONST) return parser_index;
+        else if(tokens[parser_index].type < ASSIGN || tokens[parser_index].type > CONST) return parser_index;
         if(tokens[parser_index].lexeme == "(" || tokens[parser_index].lexeme == "["){
+            AST_node* new_node = new AST_node(0);
+            new_node -> val = tokens[parser_index]; 
             a
         }
         else{
