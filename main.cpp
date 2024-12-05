@@ -205,10 +205,16 @@ int operator_checker(token &t){
     else if(type == ASSIGN || type == LOG_OR || type == LOG_AND || type == OR || type == XOR || type == AND && type == EQUAL || type == NOT || type == LESS || type == LESS_EQUAL || type == GREATER || type == GREATER_EQUAL || type == LEFT_MOVE || type == RIGHT_MOVE || type == ADD || type == SUB || type == MUL || type == DIV || type == MOD){
         return 2;
     }
+    else if(type == FRONT_BRACKET && t.lexeme == "(") return 3;
+    else if(type == FRONT_BRACKET && t.lexeme == "[") return 4;
     else if(type == LOG_NOT || type == OPPO){
         return 1;
     }
     else return 0;
+}
+
+int sentence(AST_node* start, char end){
+    if()
 }
 
 int lexer(ifstream &file){
@@ -365,40 +371,14 @@ int lexer(ifstream &file){
     return 0;
 }
 
-// int parser(int index, AST_node* cur){
-//     if(tokens[index].line == 0) {cur = (AST_node* )new AST_node(1, 1); parser(++index, cur -> nodes[0]);}
-//     else if(tokens[index].type == CONST || tokens[index].type == LOG_NOT || tokens[index].type == OPPO || tokens[index].type == MUL || tokens[index].type == DIV || tokens[index].type == MOD || tokens[index].type == ADD || tokens[index].type == SUB || tokens[index].type == LEFT_MOVE || tokens[index].type == RIGHT_MOVE || tokens[index].type == LESS || tokens[index].type == LESS_EQUAL || tokens[index].type == GREATER || tokens[index].type == GREATER_EQUAL || tokens[index].type == EQUAL || tokens[index].type == NOT || tokens[index].type == AND || tokens[index].type == AND || tokens[index].type == XOR || tokens[index].type == OR || tokens[index].type == LOG_AND || tokens[index].type == LOG_OR || tokens[index].type == ASSIGN){
-//         if(operation_priority.find(cur -> val.type) == operation_priority.end() || operation_priority[cur -> val.type] <= operation_priority[tokens[index].type]){
-//             static AST_node* new_node = new AST_node(0);
-//             new_node -> val = tokens[index];
-//             cur -> nodes.push_back(new_node);
-//             cur -> size++;
-//             int err = parser(index++, cur -> nodes[cur -> size - 1]);
-//             if(err) return index;
-//         }
-//         else{
-//             static AST_node* new_node = new AST_node(0);
-//             new_node -> val = cur -> val;
-//             cur -> val = tokens[index];
-//             cur -> nodes.push_back(new_node);
-//             cur -> size++;
-//             int err = parser(index++, cur -> nodes[0]);
-//             if(err) return index;
-//         }
-//     }
-//     else if(tokens[index].type == SEMICOLON){
-//         return 0;
-//     }
-//     return 0;
-// }
-
 int parser(AST_node* &cur_head){
+    int check = operator_checker(tokens[parser_index]);
     if(parser_index == -1) {
         cur_head = (AST_node* )new AST_node(0, 1);
         parser_index++;
         parser(cur_head);
     }
-    else if(operator_checker(tokens[parser_index]) == -2){
+    else if(check == -2){
         AST_node* new_node = new AST_node(0);
         new_node -> val = tokens[parser_index];
         cur_head -> nodes.push_back(new_node);
@@ -428,12 +408,33 @@ int parser(AST_node* &cur_head){
             return 0;
         }
     }
-    else if(operator_checker(tokens[parser_index]) == -3){
+    else if(check == -3){
         AST_node* new_node = new AST_node(0);
         new_node -> val = tokens[parser_index];
         cur_head -> nodes.push_back(new_node);
         cur_head -> size++;
         parser(new_node);
+    }
+    else if(check == -1 && check == 1 && check == 3){
+        AST_node* new_node = new AST_node(0);
+        new_node -> val = tokens[parser_index];
+        cur_head -> nodes.push_back(new_node);
+        cur_head -> size++;
+        parser_index++;
+        char end;
+        if(cur_head -> val.type == WHILE || (cur_head -> val.type == FOR && cur_head -> size == 3) || cur_head -> val.type == IF || cur_head -> val.type == ELSE_IF || cur_head -> val.lexeme == "("){
+            end = ')';
+            if(new_node -> val.lexeme == ")") return parser_index - 1;
+        }
+        else if(cur_head -> val.lexeme == "["){
+            end = ']';
+            if(new_node -> val.lexeme == "]") return parser_index - 1;
+        }
+        else {
+            end = ';'
+            if(new_node -> val.type == SEMICOLON) return 0;
+        }
+        int err = sentence(new_node, end);
     }
     else{
     }
