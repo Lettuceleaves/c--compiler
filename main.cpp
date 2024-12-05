@@ -220,27 +220,33 @@ AST_node* check_priority_in_tree(AST_node* cur){
 }
 
 int sentence(AST_node* start, int end){
-    if(tokens[parser_index].type == SEMICOLON && end == 2) return 0;
-    else if(tokens[parser_index].lexeme == "]" && end == 1) return 0;
-    else if(tokens[parser_index].lexeme == ")" && end == 0) return 0;
-    else if(tokens[parser_index].val < ASSIGN || tokens[parser_index].val > CONST) return parser_index;
-    if(tokens[parser_index].lexeme == "(" || tokens[parser_index].lexeme == "[")
-    else{
-        AST_node* insert_parent_node = check_priority_in_tree(start);
-        AST_node* new_node = new AST_node(0);
-        new_node -> val = tokens[parser_index];
-        int parent_size = insert_parent_node -> size;
-        if(parent_size < 2){
-            insert_parent_node -> nodes.push_back(new_node);
-            insert_parent_node -> size++;
+    while(tokens[parser_index].type != EOF){
+        if(tokens[parser_index].type == SEMICOLON && end == 2) return 0;
+        else if(tokens[parser_index].lexeme == "]" && end == 1) return 0;
+        else if(tokens[parser_index].lexeme == ")" && end == 0) return 0;
+        else if(tokens[parser_index].val < ASSIGN || tokens[parser_index].val > CONST) return parser_index;
+        if(tokens[parser_index].lexeme == "(" || tokens[parser_index].lexeme == "["){
+            a
         }
-        else if(parent_size == 2){
-            new_node -> nodes.push_back(insert_parent_node -> nodes[1]);
-            insert_parent_node -> nodes[1] = new_node;
-            new_node -> size++;
+        else{
+            AST_node* insert_parent_node = check_priority_in_tree(start);
+            AST_node* new_node = new AST_node(0);
+            new_node -> val = tokens[parser_index];
+            int parent_size = insert_parent_node -> size;
+            if(parent_size < 2){
+                insert_parent_node -> nodes.push_back(new_node);
+                insert_parent_node -> size++;
+            }
+            else if(parent_size == 2){
+                new_node -> nodes.push_back(insert_parent_node -> nodes[1]);
+                insert_parent_node -> nodes[1] = new_node;
+                new_node -> size++;
+            }
+            else return parser_index;
         }
-        else return parser_index;
+        parser_index++;
     }
+    return parser_index;
 }
 
 int lexer(ifstream &file){
