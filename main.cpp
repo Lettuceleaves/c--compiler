@@ -376,7 +376,10 @@ int parser(AST_node* &cur_head){
     if(parser_index == -1) {
         cur_head = (AST_node* )new AST_node(0, 1);
         parser_index++;
-        parser(cur_head);
+        while(tokens[parser_index].type != EOF){
+            parser(cur_head);
+        }
+        return 0;
     }
     else if(check == -2){
         AST_node* new_node = new AST_node(0);
@@ -435,7 +438,9 @@ int parser(AST_node* &cur_head){
             if(new_node -> val.type == SEMICOLON) return 0;
         }
         int err = sentence(new_node, end);
+        if(err) return err;
     }
+    else if(cur_head != AST_Head && tokens[parser_index].type == EOF_) return parser_index;
     else{
     }
     return 0;
