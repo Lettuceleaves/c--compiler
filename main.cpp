@@ -15,11 +15,6 @@ bool mode_code = false;
 bool mode_token = false;
 bool mode_ast = false;
 
-// enum token_type {
-//                     CONST, RET, EOF_, SEMICOLON, DOT, 
-//                     SINGLE_QUOT, DOUBLE_QUOT, POINT,
-//                     FRONT_BRACKET, BACK_BRACKET, PRINT};    // others
-
 enum token_type {
 IF, ELSE, ELSE_IF, WHILE, FOR,
 
@@ -42,8 +37,6 @@ RET, POINT, FRONT_BRACKET, PRINT, START     // return . ([{ printf
 };
 
 int enum_size = START + 1;
-
-// enum token_type {DATA, SCOP, NAME, KEYW, CALC, SYST};
 
 unordered_map<int, int> operation_priority;
 
@@ -474,7 +467,11 @@ int parser(AST_node* &cur_head){
         while(tokens[parser_index].type != EOF){
             int err = parser(cur_head);
             parser_index++;
-            if(err) return parser_index;
+            if(err == tokens.size()) return 0;
+            if(err){
+                cout << "start error: " << err << endl;
+                return parser_index;
+            }
         }
         return 0;
     }
@@ -518,7 +515,7 @@ int parser(AST_node* &cur_head){
         cur_head -> size++;
         parser(new_node);
     }
-    else if(check == -1 && check == 1 && check == 3){
+    else if(check == -1 || check == 1 || check == 3){
         AST_node* new_node = new AST_node(0);
         new_node -> val = tokens[parser_index];
         cur_head -> nodes.push_back(new_node);
@@ -537,6 +534,7 @@ int parser(AST_node* &cur_head){
             end = 2;
             if(new_node -> val.type == SEMICOLON) return 0;
         }
+        cout << "operation end: " << end << endl;
         int err = sentence(new_node, end);
         if(err) return err;
         parser_index++;
@@ -617,7 +615,7 @@ int main(int argc, char* argv[]) {
     // print tokens if choose the mode
 
     if(fill_int_enum_name_list() == false) return 1;
-    if(mode_token) for(token t : tokens) cout << "token line: "<< t.line << "\ttoken type: " << t.type << "\ttoken float_val: " << t.float_val << "\ttoken int_val: " << t.int_val << "\ttoken lexeme: " << t.lexeme << "\t\ttoken type: " << enum_name_list[t.type] << endl;
+    if(mode_token) for(int i = 0; i < tokens.size(); i++) cout << i << "\ttoken line: "<< tokens[i].line << "\ttoken type: " << tokens[i].type << "\ttoken float_val: " << tokens[i].float_val << "\ttoken int_val: " << tokens[i].int_val << "\ttoken lexeme: " << tokens[i].lexeme << "\t\ttoken type: " << enum_name_list[tokens[i].type] << endl;
 
     // build parser
 
@@ -636,7 +634,6 @@ int main(int argc, char* argv[]) {
         while(!q.empty()){
             auto [cur, level] = q.front(); q.pop();
             Ast_Nodes.push_back({cur, level});
-            cout << cur -> size << endl;
             for(int i = 0; i < cur -> size; i++){
                 if(cur -> nodes[i]) q.push({cur -> nodes[i], level + 1});
             }
