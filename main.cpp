@@ -241,7 +241,7 @@ AST_node* check_priority_in_tree(AST_node* cur){
 }
 
 int sentence(AST_node* start, int end){
-    while(tokens[parser_index].type != EOF){
+    while(tokens[parser_index].type != EOF_){
         if(tokens[parser_index].type == SEMICOLON && end == 2) return 0;
         else if(tokens[parser_index].lexeme == "]" && end == 1) return 0;
         else if(tokens[parser_index].lexeme == ")" && end == 0) return 0;
@@ -275,8 +275,8 @@ int sentence(AST_node* start, int end){
             AST_node* insert_parent_node = check_priority_in_tree(start);
             AST_node* new_node = new AST_node(0);
             new_node -> val = tokens[parser_index];
-            int parent_size = insert_parent_node -> size;
             if(insert_parent_node){
+                int parent_size = insert_parent_node -> size;
                 if(parent_size < 2){
                     insert_parent_node -> nodes.push_back(new_node);
                     insert_parent_node -> size++;
@@ -289,9 +289,12 @@ int sentence(AST_node* start, int end){
                 else return parser_index;
             }
             else{
+                if(AST_Head -> size > 0) cout << "!: debug: " << AST_Head -> nodes[1] -> val.type << " " << start -> val.type << endl << endl;
+                if(start == AST_Head -> nodes[1]) cout << "EQUALLLLLLL" << endl;
                 new_node -> nodes.push_back(start);
                 start = new_node;
                 new_node -> size++;
+                if(AST_Head -> size > 0) cout << "!!: debug: " << AST_Head -> nodes[1] -> val.type << " " << start -> val.type << endl << endl;
             }
         }
         parser_index++;
@@ -464,10 +467,13 @@ int parser(AST_node* &cur_head){
     if(parser_index == -1) {
         cur_head = (AST_node* )new AST_node(0, 1);
         parser_index++;
-        while(tokens[parser_index].type != EOF){
+        while(tokens[parser_index].type != EOF_){
             int err = parser(cur_head);
-            parser_index++;
+            // debug
+
+            if(AST_Head -> size > 0) cout << "debug: " << AST_Head -> nodes[1] -> val.lexeme << endl << endl;
             if(err == tokens.size()) return 0;
+
             if(err){
                 cout << "start error: " << err << endl;
                 return parser_index;
