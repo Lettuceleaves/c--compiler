@@ -7,6 +7,7 @@
 #include <fstream>
 #include <unordered_set>
 #include <unordered_map>
+#include <functional>
 #include <math.h>
 using namespace std;
 
@@ -272,14 +273,16 @@ int sentence(AST_node* start, int end){
                 insert_parent_node -> size++;
             }
             else if(parent_size == 2){
-                new_node -> nodes.push_back(insert_parent_node -> nodes[1]);
-                insert_parent_node -> nodes[1] = new_node;
+                AST_node* tmp = new AST_node(0);
+                *tmp = *insert_parent_node;
+                *insert_parent_node = *new_node;
+                new_node -> nodes.push_back(tmp);
                 new_node -> size++;
             }
             else return parser_index;
         }
         else{
-            AST_node* insert_parent_node = check_priority_in_tree(start);
+            AST_node* insert_parent_node = check_priority_in_tree(start); ////////////////////////////////////////////////////////////////////////////////左树低且右树空时应该插入而不是push
             AST_node* new_node = new AST_node(0);
             new_node -> val = tokens[parser_index];
             if(insert_parent_node){
@@ -289,8 +292,10 @@ int sentence(AST_node* start, int end){
                     insert_parent_node -> size++;
                 }
                 else if(parent_size == 2){
-                    new_node -> nodes.push_back(insert_parent_node -> nodes[1]);
-                    insert_parent_node -> nodes[1] = new_node;
+                    AST_node* tmp = new AST_node(0);
+                    *tmp = *insert_parent_node;
+                    *insert_parent_node = *new_node;
+                    new_node -> nodes.push_back(tmp);
                     new_node -> size++;
                 }
                 else return parser_index;
@@ -300,6 +305,7 @@ int sentence(AST_node* start, int end){
                 *tmp = *start;
                 *start = *new_node;
                 new_node -> nodes.push_back(tmp);
+                new_node -> size++;
             }
         }
         parser_index++;
@@ -476,7 +482,7 @@ int parser(AST_node* &cur_head){
             int err = parser(cur_head);
             // debug
 
-            if(AST_Head -> size > 0) cout << "debug: " << AST_Head -> nodes[1] -> val.lexeme << endl << endl;
+            // if(AST_Head -> size > 0) cout << "debug: " << AST_Head -> nodes[1] -> val.lexeme << endl << endl;
             if(err == tokens.size()) return 0;
 
             if(err){
@@ -638,30 +644,43 @@ int main(int argc, char* argv[]) {
 
     // print ast tree if choose the mode
 
+    // if(mode_ast){
+    //     queue<pair<AST_node*, int>> q;
+    //     vector<pair<AST_node*, int>> Ast_Nodes;
+    //     q.push({AST_Head, 0});
+    //     int level_max = 0;
+    //     while(!q.empty()){
+    //         auto [cur, level] = q.front(); q.pop();
+    //         level_max = max(level_max, level);
+    //         Ast_Nodes.push_back({cur, level});
+    //         for(int i = 0; i < cur -> size; i++){
+    //             if(cur -> nodes[i]) q.push({cur -> nodes[i], level + 1});
+    //         }
+    //     }
+    //     int cout_level = 0;
+    //     unordered_map<int, int> level_count;
+    //     for(auto [cur, level] : Ast_Nodes){
+    //         level_count[level]++;
+    //         if(level != cout_level){
+    //             cout << endl;
+    //             cout_level = level;
+    //         }
+    //         cout << "[" << enum_name_list[cur -> val.type] << ", " << cur -> val.lexeme << "] ";
+    //     }
+    //     cout << endl;
+    // }
+
     if(mode_ast){
-        queue<pair<AST_node*, int>> q;
-        vector<pair<AST_node*, int>> Ast_Nodes;
-        q.push({AST_Head, 0});
-        int level_max = 0;
-        while(!q.empty()){
-            auto [cur, level] = q.front(); q.pop();
-            level_max = max(level_max, level);
-            Ast_Nodes.push_back({cur, level});
+        function<void(AST_node*, int)> dfs = [&](AST_node* cur, int level){
+            string space = "    ";
+            for(int i = 0; i < level; i++) cout << space;
+            cout << cur -> val.lexeme << " " << cur -> size << endl;
             for(int i = 0; i < cur -> size; i++){
-                if(cur -> nodes[i]) q.push({cur -> nodes[i], level + 1});
+                dfs(cur -> nodes[i], level + 1);
             }
-        }
-        int cout_level = 0;
-        unordered_map<int, int> level_count;
-        for(auto [cur, level] : Ast_Nodes){
-            level_count[level]++;
-            if(level != cout_level){
-                cout << endl;
-                cout_level = level;
-            }
-            cout << "[" << enum_name_list[cur -> val.type] << ", " << cur -> val.lexeme << "] ";
-        }
-        cout << endl;
+            return;
+        };
+        dfs(AST_Head, 0);
     }
 
     // safe exit
