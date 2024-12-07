@@ -66,6 +66,13 @@ public:
         val.type = START;
         nodes.reserve(size);
     }
+    AST_node& operator = (const AST_node& other){
+        if(this != &other){
+            val = other.val;
+            size = other.size;
+            nodes = other.nodes;
+        }
+    }
 };
 
 unordered_map<string, int> var_name;
@@ -289,12 +296,10 @@ int sentence(AST_node* start, int end){
                 else return parser_index;
             }
             else{
-                if(AST_Head -> size > 0) cout << "!: debug: " << AST_Head -> nodes[1] -> val.type << " " << start -> val.type << endl << endl;
-                if(start == AST_Head -> nodes[1]) cout << "EQUALLLLLLL" << endl;
-                new_node -> nodes.push_back(start);
-                start = new_node;
-                new_node -> size++;
-                if(AST_Head -> size > 0) cout << "!!: debug: " << AST_Head -> nodes[1] -> val.type << " " << start -> val.type << endl << endl;
+                AST_node* tmp = new AST_node(0);
+                *tmp = *start;
+                *start = *new_node;
+                new_node -> nodes.push_back(tmp);
             }
         }
         parser_index++;
@@ -637,8 +642,10 @@ int main(int argc, char* argv[]) {
         queue<pair<AST_node*, int>> q;
         vector<pair<AST_node*, int>> Ast_Nodes;
         q.push({AST_Head, 0});
+        int level_max = 0;
         while(!q.empty()){
             auto [cur, level] = q.front(); q.pop();
+            level_max = max(level_max, level);
             Ast_Nodes.push_back({cur, level});
             for(int i = 0; i < cur -> size; i++){
                 if(cur -> nodes[i]) q.push({cur -> nodes[i], level + 1});
@@ -650,6 +657,7 @@ int main(int argc, char* argv[]) {
                 cout << endl;
                 cout_level = level;
             }
+            for(int i = 0; i < level_max - level; i++) cout << "    ";
             cout << "[" << enum_name_list[cur -> val.type] << ", " << cur -> val.lexeme << "] ";
         }
         cout << endl;
