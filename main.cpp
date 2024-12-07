@@ -652,12 +652,13 @@ int main(int argc, char* argv[]) {
             }
         }
         int cout_level = 0;
+        unordered_map<int, int> level_count;
         for(auto [cur, level] : Ast_Nodes){
+            level_count[level]++;
             if(level != cout_level){
                 cout << endl;
                 cout_level = level;
             }
-            for(int i = 0; i < level_max - level; i++) cout << "    ";
             cout << "[" << enum_name_list[cur -> val.type] << ", " << cur -> val.lexeme << "] ";
         }
         cout << endl;
