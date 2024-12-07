@@ -304,8 +304,11 @@ int sentence(AST_node* start, int end){
                 AST_node* tmp = new AST_node(0);
                 *tmp = *start;
                 *start = *new_node;
-                new_node -> nodes.push_back(tmp);
-                new_node -> size++;
+                start -> nodes.push_back(tmp);
+                start -> size++;
+                cout << start -> size << " " << start -> val.lexeme << " " << AST_Head -> nodes[0]->val.lexeme << endl; ///////////////////////////root = root -> left a(1) 插入 const 1 时会插入a下方，应该在=右侧
+                int a = 0; 
+                a += 1;
             }
         }
         parser_index++;
