@@ -67,12 +67,13 @@ public:
         val.type = START;
         nodes.reserve(size);
     }
-    AST_node& operator = (const AST_node& other){
+    AST_node operator = (const AST_node& other){
         if(this != &other){
             val = other.val;
             size = other.size;
             nodes = other.nodes;
         }
+        return *this;
     }
 };
 
@@ -234,15 +235,14 @@ AST_node* check_priority_in_tree(AST_node* cur){
     int size = cur -> size;
     if(size == 0) return cur;
     else if(size == 1){
-        int left_prority = (cur -> nodes[0] -> val.type == FRONT_BRACKET) ? INT_MAX : operation_priority[cur -> nodes[0] -> val.type];
-        if(left_prority > token_priority) return cur;
-        else return check_priority_in_tree(cur -> nodes[0]);
+        // int left_prority = (cur -> nodes[0] -> val.type == FRONT_BRACKET) ? INT_MAX : operation_priority[cur -> nodes[0] -> val.type];
+        // if(left_prority > token_priority) return cur;
+        // else return check_priority_in_tree(cur -> nodes[0]);
+        return cur;
     }
     else{
-        int left_prority = (cur -> nodes[0] -> val.type == FRONT_BRACKET) ? INT_MAX : operation_priority[cur -> nodes[0] -> val.type];
         int right_prority = (cur -> nodes[1] -> val.type == FRONT_BRACKET) ? INT_MAX : operation_priority[cur -> nodes[1] -> val.type];
-        if(left_prority <= token_priority) return check_priority_in_tree(cur -> nodes[0]);
-        else if(right_prority <= token_priority) return check_priority_in_tree(cur -> nodes[1]);
+        if(right_prority < token_priority) return check_priority_in_tree(cur -> nodes[1]);
         else return cur;
     }
     return cur;
@@ -274,15 +274,15 @@ int sentence(AST_node* start, int end){
             }
             else if(parent_size == 2){
                 AST_node* tmp = new AST_node(0);
-                *tmp = *insert_parent_node;
-                *insert_parent_node = *new_node;
+                *tmp = *insert_parent_node -> nodes[1];
+                *insert_parent_node -> nodes[1] = *new_node;
                 new_node -> nodes.push_back(tmp);
                 new_node -> size++;
             }
             else return parser_index;
         }
         else{
-            AST_node* insert_parent_node = check_priority_in_tree(start); ////////////////////////////////////////////////////////////////////////////////左树低且右树空时应该插入而不是push
+            AST_node* insert_parent_node = check_priority_in_tree(start); //-?/////////////////////////////////////////////////////////////////////////////左树低且右树空时应该插入而不是push
             AST_node* new_node = new AST_node(0);
             new_node -> val = tokens[parser_index];
             if(insert_parent_node){
@@ -293,8 +293,8 @@ int sentence(AST_node* start, int end){
                 }
                 else if(parent_size == 2){
                     AST_node* tmp = new AST_node(0);
-                    *tmp = *insert_parent_node;
-                    *insert_parent_node = *new_node;
+                    *tmp = *insert_parent_node -> nodes[1];
+                    *insert_parent_node -> nodes[1] = *new_node;
                     new_node -> nodes.push_back(tmp);
                     new_node -> size++;
                 }
