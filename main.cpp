@@ -137,8 +137,8 @@ bool fill_int_enum_name_list(){
 
 void operation_priority_init(){
     int level = 0;
-    for(int i = LOG_NOT; i <= CONST; i++){
-        if(i == MUL || i == ADD || i == LEFT_MOVE || i == LESS || i == EQUAL || i == AND || i == XOR || i == OR || i == LOG_AND || i == LOG_OR || i == ASSIGN || i == INT) level++;
+    for(int i = ASSIGN; i <= CONST; i++){
+        if(i == LOG_OR || i == LOG_AND || i == OR || i == XOR || i == AND || i == EQUAL || i == LESS || i == LEFT_MOVE || i == ADD || i == MUL || i == LOG_NOT || i == INT) level++;
         operation_priority[i] = level;
     }
 }
@@ -249,6 +249,7 @@ AST_node* check_priority_in_tree(AST_node* cur){
 }
 
 int sentence(AST_node* &start, int end){
+    printf("%x\n", &start);
     while(tokens[parser_index].type != EOF_){
         if(tokens[parser_index].type == SEMICOLON && end == 2) return 0;
         else if(tokens[parser_index].lexeme == "]" && end == 1) return 0;
@@ -562,7 +563,8 @@ int parser(AST_node* &cur_head){
             if(new_node -> val.type == SEMICOLON) return 0;
         }
         cout << "operation end: " << end << endl;
-        int err = sentence(new_node, end);
+        printf("%x\n", &(cur_head -> nodes[cur_head -> size - 1]));
+        int err = sentence(cur_head -> nodes[cur_head -> size - 1], end);
         if(err) return err;
         parser_index++;
     }
@@ -647,7 +649,7 @@ int main(int argc, char* argv[]) {
     // build parser
 
     operation_priority_init();
-    int parser_err = parser(&AST_Head);
+    int parser_err = parser(AST_Head);
 
     if(parser_err) {cout << "Error happened in parser, when analyse the " << parser_err << "th node\nwhilch in " << tokens[parser_err].line << endl; return -1;}
     else cout << "Parser runs successfully" << endl << endl;
