@@ -226,20 +226,13 @@ AST_node* check_priority_in_tree(AST_node* cur){
 
     // if should replace cur_node
 
-    if(token_priority < cur_priority){
-        return nullptr;
-    }
+    if(token_priority < cur_priority) return nullptr;
 
     // check wether cur is parent
 
     int size = cur -> size;
     if(size == 0) return cur;
-    else if(size == 1){
-        // int left_prority = (cur -> nodes[0] -> val.type == FRONT_BRACKET) ? INT_MAX : operation_priority[cur -> nodes[0] -> val.type];
-        // if(left_prority > token_priority) return cur;
-        // else return check_priority_in_tree(cur -> nodes[0]);
-        return cur;
-    }
+    else if(size == 1) return cur;
     else{
         int right_prority = (cur -> nodes[1] -> val.type == FRONT_BRACKET) ? INT_MAX : operation_priority[cur -> nodes[1] -> val.type];
         if(right_prority < token_priority) return check_priority_in_tree(cur -> nodes[1]);
@@ -274,16 +267,14 @@ int sentence(AST_node* &start, int end){
                 insert_parent_node -> size++;
             }
             else if(parent_size == 2){
-                AST_node* tmp = new AST_node(0);
-                *tmp = *insert_parent_node -> nodes[1];
-                *insert_parent_node -> nodes[1] = *new_node;
-                new_node -> nodes.push_back(tmp);
+                new_node -> nodes.push_back(insert_parent_node -> nodes[1]);
                 new_node -> size++;
+                insert_parent_node -> nodes[1] = new_node;
             }
             else return parser_index;
         }
         else{
-            AST_node* insert_parent_node = check_priority_in_tree(start); //-?/////////////////////////////////////////////////////////////////////////////左树低且右树空时应该插入而不是push
+            AST_node* insert_parent_node = check_priority_in_tree(start);
             AST_node* new_node = new AST_node(0);
             new_node -> val = tokens[parser_index];
             if(insert_parent_node){
@@ -293,11 +284,6 @@ int sentence(AST_node* &start, int end){
                     insert_parent_node -> size++;
                 }
                 else if(parent_size == 2){
-                    // AST_node* tmp = new AST_node(0);
-                    // *tmp = *insert_parent_node -> nodes[1];
-                    // new_node -> nodes.push_back(tmp);
-                    // new_node -> size++;
-                    // *insert_parent_node -> nodes[1] = *new_node;
                     new_node -> nodes.push_back(insert_parent_node -> nodes[1]);
                     new_node -> size++;
                     insert_parent_node -> nodes[1] = new_node;
@@ -305,18 +291,9 @@ int sentence(AST_node* &start, int end){
                 else return parser_index;
             }
             else{
-                // AST_node* tmp = new AST_node(0);
-                // *tmp = *start;
-                // *start = *new_node;
-                // start -> nodes.push_back(tmp); //a
-                // start -> size++;
                 new_node -> nodes.push_back(start);
                 new_node -> size++;
                 start = new_node;
-                printf("%x %x\n", start, &start);
-                cout << start -> size << " " << start -> val.lexeme << " " << AST_Head -> nodes[0]->val.lexeme << endl; ///////////////////////////root = root -> left a(1) 插入 const 1 时会插入a下方，应该在=右侧
-                int a = 0; 
-                a += 1;
             }
         }
         parser_index++;
@@ -481,9 +458,6 @@ int lexer(ifstream &file){
 int debug_counter = 0;
 
 int parser(AST_node* &cur_head){
-    cout << parser_index << endl;
-    debug_counter++;
-    if(debug_counter >= 100) return -1;
     if(parser_index >= (int)tokens.size()) return parser_index;
     int check = operator_checker(tokens[parser_index]);
     if(parser_index == -1) {
@@ -491,11 +465,7 @@ int parser(AST_node* &cur_head){
         parser_index++;
         while(tokens[parser_index].type != EOF_){
             int err = parser(cur_head);
-            // debug
-
-            // if(AST_Head -> size > 0) cout << "debug: " << AST_Head -> nodes[1] -> val.lexeme << endl << endl;
             if(err == tokens.size()) return 0;
-
             if(err){
                 cout << "start error: " << err << endl;
                 return parser_index;
@@ -562,8 +532,6 @@ int parser(AST_node* &cur_head){
             end = 2;
             if(new_node -> val.type == SEMICOLON) return 0;
         }
-        cout << "operation end: " << end << endl;
-        printf("%x\n", &(cur_head -> nodes[cur_head -> size - 1]));
         int err = sentence(cur_head -> nodes[cur_head -> size - 1], end);
         if(err) return err;
         parser_index++;
@@ -655,32 +623,6 @@ int main(int argc, char* argv[]) {
     else cout << "Parser runs successfully" << endl << endl;
 
     // print ast tree if choose the mode
-
-    // if(mode_ast){
-    //     queue<pair<AST_node*, int>> q;
-    //     vector<pair<AST_node*, int>> Ast_Nodes;
-    //     q.push({AST_Head, 0});
-    //     int level_max = 0;
-    //     while(!q.empty()){
-    //         auto [cur, level] = q.front(); q.pop();
-    //         level_max = max(level_max, level);
-    //         Ast_Nodes.push_back({cur, level});
-    //         for(int i = 0; i < cur -> size; i++){
-    //             if(cur -> nodes[i]) q.push({cur -> nodes[i], level + 1});
-    //         }
-    //     }
-    //     int cout_level = 0;
-    //     unordered_map<int, int> level_count;
-    //     for(auto [cur, level] : Ast_Nodes){
-    //         level_count[level]++;
-    //         if(level != cout_level){
-    //             cout << endl;
-    //             cout_level = level;
-    //         }
-    //         cout << "[" << enum_name_list[cur -> val.type] << ", " << cur -> val.lexeme << "] ";
-    //     }
-    //     cout << endl;
-    // }
 
     if(mode_ast){
         function<void(AST_node*, int)> dfs = [&](AST_node* cur, int level){
