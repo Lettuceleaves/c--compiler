@@ -248,7 +248,7 @@ AST_node* check_priority_in_tree(AST_node* cur){
     return cur;
 }
 
-int sentence(AST_node* start, int end){
+int sentence(AST_node* &start, int end){
     while(tokens[parser_index].type != EOF_){
         if(tokens[parser_index].type == SEMICOLON && end == 2) return 0;
         else if(tokens[parser_index].lexeme == "]" && end == 1) return 0;
@@ -292,20 +292,27 @@ int sentence(AST_node* start, int end){
                     insert_parent_node -> size++;
                 }
                 else if(parent_size == 2){
-                    AST_node* tmp = new AST_node(0);
-                    *tmp = *insert_parent_node -> nodes[1];
-                    *insert_parent_node -> nodes[1] = *new_node;
-                    new_node -> nodes.push_back(tmp);
+                    // AST_node* tmp = new AST_node(0);
+                    // *tmp = *insert_parent_node -> nodes[1];
+                    // new_node -> nodes.push_back(tmp);
+                    // new_node -> size++;
+                    // *insert_parent_node -> nodes[1] = *new_node;
+                    new_node -> nodes.push_back(insert_parent_node -> nodes[1]);
                     new_node -> size++;
+                    insert_parent_node -> nodes[1] = new_node;
                 }
                 else return parser_index;
             }
             else{
-                AST_node* tmp = new AST_node(0);
-                *tmp = *start;
-                *start = *new_node;
-                start -> nodes.push_back(tmp);
-                start -> size++;
+                // AST_node* tmp = new AST_node(0);
+                // *tmp = *start;
+                // *start = *new_node;
+                // start -> nodes.push_back(tmp); //a
+                // start -> size++;
+                new_node -> nodes.push_back(start);
+                new_node -> size++;
+                start = new_node;
+                printf("%x %x\n", start, &start);
                 cout << start -> size << " " << start -> val.lexeme << " " << AST_Head -> nodes[0]->val.lexeme << endl; ///////////////////////////root = root -> left a(1) 插入 const 1 时会插入a下方，应该在=右侧
                 int a = 0; 
                 a += 1;
@@ -640,7 +647,7 @@ int main(int argc, char* argv[]) {
     // build parser
 
     operation_priority_init();
-    int parser_err = parser(AST_Head);
+    int parser_err = parser(&AST_Head);
 
     if(parser_err) {cout << "Error happened in parser, when analyse the " << parser_err << "th node\nwhilch in " << tokens[parser_err].line << endl; return -1;}
     else cout << "Parser runs successfully" << endl << endl;
