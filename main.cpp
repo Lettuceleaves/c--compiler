@@ -31,10 +31,10 @@ LEFT_MOVE, RIGHT_MOVE,                      // << >>
 ADD, SUB,                                   // + -
 MUL, DIV, MOD,                              // * / %
 LOG_NOT, OPPO,                              // ! ~
-INT, FLOAT, CHAR, STRING, CONST,
+INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST,
 
 EOF_, DOT, SEMICOLON, BACK_BRACKET,         // EOF , ; )]}
-RET, POINT, FRONT_BRACKET, PRINT, START     // return . ([{ printf
+RET, POINT, PRINT, START     // return . ([{ printf
 };
 
 int enum_size = START + 1;
@@ -226,16 +226,21 @@ AST_node* check_priority_in_tree(AST_node* cur){
 
     // if should replace cur_node
 
-    if(token_priority < cur_priority) return nullptr;
+    if(token_priority < cur_priority && cur -> val.type != FRONT_BRACKET) return nullptr;
 
     // check wether cur is parent
 
     int size = cur -> size;
     if(size == 0) return cur;
+    else if(size == 1 && cur -> val.type == FRONT_BRACKET){
+        int left_priority = operation_priority[cur -> nodes[0]->val.type];
+        if(left_priority < token_priority) return check_priority_in_tree(cur -> nodes[0]);
+        else return cur;
+    }
     else if(size == 1) return cur;
     else{
-        int right_prority = (cur -> nodes[1] -> val.type == FRONT_BRACKET) ? INT_MAX : operation_priority[cur -> nodes[1] -> val.type];
-        if(right_prority < token_priority) return check_priority_in_tree(cur -> nodes[1]);
+        int right_priority = operation_priority[cur -> nodes[1] -> val.type];
+        if(right_priority < token_priority) return check_priority_in_tree(cur -> nodes[1]);
         else return cur;
     }
     return cur;
@@ -257,7 +262,7 @@ int sentence(AST_node* &start, int end){
                 return parser_index;
             }
             int new_end;
-            if(tokens[parser_index].lexeme == "(") new_end = 0;
+            if(tokens[parser_index - 1].lexeme == "(") new_end = 0;
             else new_end = 1;
             int err = sentence(new_node, new_end);
             if(err) return parser_index;
@@ -280,8 +285,17 @@ int sentence(AST_node* &start, int end){
             if(insert_parent_node){
                 int parent_size = insert_parent_node -> size;
                 if(parent_size < 2){
-                    insert_parent_node -> nodes.push_back(new_node);
-                    insert_parent_node -> size++;
+                    if(parent_size == 1 && insert_parent_node -> val.lexeme == "("){
+                        new_node -> nodes.push_back(insert_parent_node -> nodes[0]);
+                        new_node -> size++;
+                        insert_parent_node -> nodes[0] = new_node;
+                        int a = 0;
+                        a++;
+                    }
+                    else{
+                        insert_parent_node -> nodes.push_back(new_node);
+                        insert_parent_node -> size++;
+                    }
                 }
                 else if(parent_size == 2){
                     new_node -> nodes.push_back(insert_parent_node -> nodes[1]);
