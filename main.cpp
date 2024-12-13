@@ -502,15 +502,15 @@ int parser(AST_node* &cur_head){
             int err2 = parser(new_node);
             if(err2) return parser_index;
         }
-        if(tokens[parser_index + 1].lexeme[0] != '{'){
+        if(tokens[parser_index].lexeme[0] != '{'){
             parser_index++;
             err = parser(new_node);
-            if(err) return parser_index;
+            if(err) return parser_index; // back bracket error
             return 0;
         }
         else{
-            int save_index = parser_index + 1;
-            parser_index += 2;
+            int save_index = parser_index;
+            parser_index++;
             while(tokens[parser_index].lexeme[0] != '}'){
                 if(tokens[parser_index].type == EOF_) return save_index;
                 err = parser(new_node);
