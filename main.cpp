@@ -247,7 +247,6 @@ AST_node* check_priority_in_tree(AST_node* cur){
 }
 
 int sentence(AST_node* &start, int end){
-    printf("%x\n", &start);
     while(tokens[parser_index].type != EOF_){
         if(tokens[parser_index].type == SEMICOLON && end == 2) return 0;
         else if(tokens[parser_index].lexeme == "]" && end == 1) return 0;
@@ -479,7 +478,7 @@ int parser(AST_node* &cur_head){
         parser_index++;
         while(tokens[parser_index].type != EOF_){
             int err = parser(cur_head);
-            if(err == tokens.size()) return 0;
+            if(tokens[parser_index].type == EOF_) return 0;
             if(err){
                 cout << "start error: " << err << endl;
                 return parser_index;
@@ -495,15 +494,13 @@ int parser(AST_node* &cur_head){
         parser_index += 2;
         int err = parser(new_node);
         if(err) return parser_index;
-        parser_index++;
-        if(tokens[parser_index].type == FOR){
+        if(new_node -> val.type == FOR){
             int err1 = parser(new_node);
             if(err1) return parser_index;
             int err2 = parser(new_node);
             if(err2) return parser_index;
         }
         if(tokens[parser_index].lexeme[0] != '{'){
-            parser_index++;
             err = parser(new_node);
             if(err) return parser_index; // back bracket error
             return 0;
@@ -525,28 +522,35 @@ int parser(AST_node* &cur_head){
         new_node -> val = tokens[parser_index];
         cur_head -> nodes.push_back(new_node);
         cur_head -> size++;
-        parser(new_node);
+        parser_index++;
+        if(tokens[parser_index].lexeme != "{") return parser_index;
+        parser_index++;
+        while(tokens[parser_index].lexeme != "}"){
+            if(tokens[parser_index].type == EOF_) return parser_index;
+            parser(new_node);
+        }
+        parser_index++;
     }
     else if(check == -1 || check == 1 || check == 3){
         AST_node* new_node = new AST_node(0);
         new_node -> val = tokens[parser_index];
         cur_head -> nodes.push_back(new_node);
-        cur_head -> size++;
         parser_index++;
         int end;
-        if(cur_head -> val.type == WHILE || (cur_head -> val.type == FOR && cur_head -> size == 3) || cur_head -> val.type == IF || cur_head -> val.type == ELSE_IF || cur_head -> val.lexeme == "("){
+        if((cur_head -> size == 0 && (cur_head -> val.type == WHILE || cur_head -> val.type == IF || cur_head -> val.type == ELSE_IF)) || (cur_head -> val.type == FOR && cur_head -> size == 2)  || cur_head -> val.lexeme == "("){
             end = 0;
-            if(new_node -> val.lexeme == ")") return parser_index - 1;
+            if(new_node -> val.lexeme == ")") return parser_index;
         }
         else if(cur_head -> val.lexeme == "["){
             end = 1;
-            if(new_node -> val.lexeme == "]") return parser_index - 1;
+            if(new_node -> val.lexeme == "]") return parser_index;
         }
         else {
             end = 2;
             if(new_node -> val.type == SEMICOLON) return 0;
         }
-        int err = sentence(cur_head -> nodes[cur_head -> size - 1], end);
+        cur_head -> size++;
+        int err = sentence(cur_head -> nodes[(cur_head -> size) - 1], end);
         if(err) return err;
         parser_index++;
     }
@@ -642,7 +646,7 @@ int main(int argc, char* argv[]) {
         function<void(AST_node*, int)> dfs = [&](AST_node* cur, int level){
             string space = "    ";
             for(int i = 0; i < level; i++) cout << space;
-            cout << cur -> val.lexeme << " " << cur -> size << endl;
+            cout << cur -> val.lexeme << endl;
             for(int i = 0; i < cur -> size; i++){
                 dfs(cur -> nodes[i], level + 1);
             }
