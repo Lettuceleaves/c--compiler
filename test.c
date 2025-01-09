@@ -1,3 +1,4 @@
-int b = 0;
-if(b == 0) int a = 1;
-else{int c = 1;}
+int a = 0;
+a = a + 1;
+float c = a * a;
+char b = a - c;

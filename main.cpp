@@ -17,24 +17,24 @@ bool mode_token = false;
 bool mode_ast = false;
 
 enum token_type {
-IF, ELSE, ELSE_IF, WHILE, FOR,
+    IF, ELSE, ELSE_IF, WHILE, FOR,
 
-ASSIGN,                                     // =
-LOG_OR,                                     // ||
-LOG_AND,                                    // &&
-OR,                                         // |
-XOR,                                        // ^
-AND,                                        // &
-EQUAL, NOT,                                 // == !=
-LESS, LESS_EQUAL, GREATER, GREATER_EQUAL,   // < <= > >= 
-LEFT_MOVE, RIGHT_MOVE,                      // << >>
-ADD, SUB,                                   // + -
-MUL, DIV, MOD,                              // * / %
-LOG_NOT, OPPO,                              // ! ~
-INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST,
+    ASSIGN,                                     // =
+    LOG_OR,                                     // ||
+    LOG_AND,                                    // &&
+    OR,                                         // |
+    XOR,                                        // ^
+    AND,                                        // &
+    EQUAL, NOT,                                 // == !=
+    LESS, LESS_EQUAL, GREATER, GREATER_EQUAL,   // < <= > >= 
+    LEFT_MOVE, RIGHT_MOVE,                      // << >>
+    ADD, SUB,                                   // + -
+    MUL, DIV, MOD,                              // * / %
+    LOG_NOT, OPPO,                              // ! ~
+    INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST,
 
-EOF_, DOT, SEMICOLON, BACK_BRACKET,         // EOF , ; )]}
-RET, POINT, PRINT, START     // return . ([{ printf
+    EOF_, DOT, SEMICOLON, BACK_BRACKET,         // EOF , ; )]}
+    RET, POINT, PRINT, START     // return . ([{ printf
 };
 
 int enum_size = START + 1;
@@ -330,7 +330,7 @@ int lexer(ifstream &file){
             else if(isalpha(line[cur])){
                 string word = get_this_word(line, cur);
                 if(var_name.find(word) != var_name.end()){
-                    add_token(line_num, var_name[word], 0, 0, word);
+                    add_token(line_num, tokens[var_name[word]].type, 0, 0, word);
                     cur += word.size() - 1;
                 }
                 else if(word == "while"){
@@ -379,7 +379,7 @@ int lexer(ifstream &file){
                             else if(word == "char") type = CHAR;
                             else type = FLOAT;
                             add_token(line_num, type, 0, 0, next_word);
-                            var_name[next_word] = type;
+                            var_name[next_word] = tokens.size() - 1;
                             cur = next + next_word.size() - 1;
                             break;
                         }
@@ -560,6 +560,19 @@ int parser(AST_node* &cur_head){
     return 0;
 }
 
+void ast_dfs(AST_node* node) {
+    if (node == nullptr) return;
+    stack<AST_node*> s;
+    s.push(node);
+    while (!s.empty()) {
+        AST_node* cur = s.top();
+        s.pop();
+        for (auto it = cur->nodes.rbegin(); it != cur->nodes.rend(); ++it) {
+            s.push(*it);
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
 
     // input check print
@@ -653,6 +666,12 @@ int main(int argc, char* argv[]) {
             return;
         };
         dfs(AST_Head, 0);
+    }
+
+    ast_dfs(AST_Head);
+
+    for (const auto& var : var_name) {
+        cout << var_name[var.first] << " " << tokens[var_name[var.first]].int_val << " " << tokens[var_name[var.first]].float_val << endl;
     }
 
     // safe exit
