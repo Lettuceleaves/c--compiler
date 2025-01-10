@@ -85,7 +85,6 @@ AST_node* AST_Head;
 
 int parser_index = -1;
 
-
 bool fill_int_enum_name_list(){
     for(int i = 0; i < enum_size; i++){
         switch(i){
@@ -562,13 +561,404 @@ int parser(AST_node* &cur_head){
 
 void ast_dfs(AST_node* node) {
     if (node == nullptr) return;
-    stack<AST_node*> s;
-    s.push(node);
-    while (!s.empty()) {
-        AST_node* cur = s.top();
-        s.pop();
-        for (auto it = cur->nodes.rbegin(); it != cur->nodes.rend(); ++it) {
-            s.push(*it);
+    if(node -> val.type == FOR){
+        ast_dfs(node -> nodes[0]);
+        while(1){
+            ast_dfs(node -> nodes[1]);
+            if(node -> nodes[1] -> val.int_val == 0) break;
+            ast_dfs(node -> nodes[2]);
+        }
+    }
+    else if(node -> val.type == IF || node -> val.type == ELSE_IF){
+        ast_dfs(node -> nodes[0]);
+        if(node -> nodes[0] -> val.int_val != 0){
+            for(int i = 1; i < node -> size; i++){
+                ast_dfs(node -> nodes[i]);
+            }
+        }
+        else return;
+    }
+    else if(node -> val.type == WHILE){
+        while(1){
+            ast_dfs(node -> nodes[0]);
+            if(node -> nodes[0] -> val.int_val == 0) break;
+            ast_dfs(node -> nodes[1]);
+        }
+    }
+    else if(node -> val.type == ASSIGN){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT){
+            int val;
+            if(node -> nodes[1] -> val.type == FLOAT){
+                int val = (int)node -> nodes[1] -> val.float_val;
+            }
+            else{
+                val = node -> nodes[1] -> val.int_val;
+            }
+            var_name[node -> nodes[0] -> val.lexeme] = val;
+            node -> val.int_val = val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT){
+            float val;
+            if(node -> nodes[1] -> val.type == INT){
+                val = (float)node -> nodes[1] -> val.int_val;
+            }
+            else{
+                val = node -> nodes[1] -> val.float_val;
+            }
+            var_name[node -> nodes[0] -> val.lexeme] = val;
+            node -> val.float_val = val;
+        }
+        else if(node -> nodes[0] -> val.type == CHAR){
+            int val;
+            if(node -> nodes[1] -> val.type == FLOAT){
+                int val = (int)node -> nodes[1] -> val.float_val;
+            }
+            else{
+                val = node -> nodes[1] -> val.int_val;
+            }
+            val = abs(val % 256);
+            var_name[node -> nodes[0] -> val.lexeme] = val;
+            node -> val.int_val = val;
+        }
+    }
+    else if(node -> val.type == ADD){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val + node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.float_val = node -> nodes[0] -> val.float_val + node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.float_val = node -> nodes[0] -> val.int_val + node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.float_val = node -> nodes[0] -> val.float_val + node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == SUB){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val - node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.float_val = node -> nodes[0] -> val.float_val - node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.float_val = node -> nodes[0] -> val.int_val - node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.float_val = node -> nodes[0] -> val.float_val - node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == MUL){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val * node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.float_val = node -> nodes[0] -> val.float_val * node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.float_val = node -> nodes[0] -> val.int_val * node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.float_val = node -> nodes[0] -> val.float_val * node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == DIV){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val / node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.float_val = node -> nodes[0] -> val.float_val / node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.float_val = node -> nodes[0] -> val.int_val / node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.float_val = node -> nodes[0] -> val.float_val / node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == MOD){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val % node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.float_val = fmod(node -> nodes[0] -> val.float_val, node -> nodes[1] -> val.float_val);
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.float_val = fmod(node -> nodes[0] -> val.int_val, node -> nodes[1] -> val.float_val);
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.float_val = fmod(node -> nodes[0] -> val.float_val, node -> nodes[1] -> val.int_val);
+        }
+    }
+    else if(node -> val.type == LOG_NOT){
+        ast_dfs(node -> nodes[0]);
+        if(node -> nodes[0] -> val.type == INT){
+            node -> val.int_val = !node -> nodes[0] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT){
+            node -> val.int_val = !node -> nodes[0] -> val.float_val;
+        }
+    }
+    else if(node -> val.type == OPPO){
+        ast_dfs(node -> nodes[0]);
+        if(node -> nodes[0] -> val.type == INT){
+            node -> val.int_val = -node -> nodes[0] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT){
+            node -> val.float_val = -node -> nodes[0] -> val.float_val;
+        }
+    }
+    else if(node -> val.type == LESS){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val < node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.float_val < node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val < node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.float_val < node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == LESS_EQUAL){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val <= node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.float_val <= node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val <= node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.float_val <= node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == GREATER){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val > node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.float_val > node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val > node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.float_val > node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == GREATER_EQUAL){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val >= node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.float_val >= node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val >= node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.float_val >= node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == AND){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val & node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val & (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val & (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val & node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == OR){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val | node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val | (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val | (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val | node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == XOR){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val ^ node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val ^ (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val ^ (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val ^ node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == LOG_AND){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val && node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val && (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val && (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val && node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == LOG_OR){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val || node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val || (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val || (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val || node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == EQUAL){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val == node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val == (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val == (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val == node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == NOT){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val != node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val != (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val != (int)node -> nodes[1] -> val.float_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val != node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == FRONT_BRACKET){
+        ast_dfs(node -> nodes[0]);
+        if(node -> nodes[0] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT){
+            node -> val.float_val = node -> nodes[0] -> val.float_val;
+        }
+    }
+    else if(node -> val.type == CONST){
+        if(node -> val.lexeme == "CHAR"){
+            node -> val.type = CHAR;
+            node -> val.int_val = node -> val.int_val;
+        }
+    }
+    else if(node -> val.type == STRING){
+        node -> val.int_val = 0;
+    }
+    else if(node -> val.type == PRINT){
+        for(int i = 0; i < node -> size; i++){
+            ast_dfs(node -> nodes[i]);
+            if(node -> nodes[i] -> val.type == INT){
+                cout << node -> nodes[i] -> val.int_val << " ";
+            }
+            else if(node -> nodes[i] -> val.type == FLOAT){
+                cout << node -> nodes[i] -> val.float_val << " ";
+            }
+            else if(node -> nodes[i] -> val.type == CHAR){
+                cout << (char)node -> nodes[i] -> val.int_val << " ";
+            }
+            else if(node -> nodes[i] -> val.type == STRING){
+                cout << node -> nodes[i] -> val.lexeme << " ";
+            }
+        }
+        cout << endl;
+    }
+    else if(node -> val.type == LEFT_MOVE){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val << node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val << node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == RIGHT_MOVE){
+        ast_dfs(node -> nodes[0]);
+        ast_dfs(node -> nodes[1]);
+        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = node -> nodes[0] -> val.int_val >> node -> nodes[1] -> val.int_val;
+        }
+        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
+            node -> val.int_val = (int)node -> nodes[0] -> val.float_val >> node -> nodes[1] -> val.int_val;
+        }
+    }
+    else if(node -> val.type == INT || node -> val.type == FLOAT || node -> val.type == CHAR || node -> val.type == STRING){
+        return;
+    }
+    else if(node -> val.type == START){
+        for(int i = 0; i < node -> size; i++){
+            ast_dfs(node -> nodes[i]);
         }
     }
 }
