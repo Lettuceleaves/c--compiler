@@ -58,7 +58,15 @@
       "xtree": "cpp",
       "xutility": "cpp",
       "stdlib.h": "c",
-      "string.h": "c"
+      "string.h": "c",
+      "array": "cpp",
+      "cstdarg": "cpp",
+      "cwctype": "cpp",
+      "unordered_set": "cpp",
+      "functional": "cpp",
+      "memory_resource": "cpp",
+      "optional": "cpp",
+      "string_view": "cpp"
     },
     "editor.suggest.snippetsPreventQuickSuggestions": false,
     "aiXcoder.showTrayIcon": true
