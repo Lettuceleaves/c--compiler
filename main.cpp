@@ -48,6 +48,7 @@ struct token{
     int type = -1;
     float float_val = 0;
     int int_val = 0;
+    int flag = 0;
     string lexeme;
 };
 
@@ -245,6 +246,52 @@ AST_node* check_priority_in_tree(AST_node* cur){
     return cur;
 }
 
+void check_val(int &type, int &int_val, float &float_val, token tk){
+    if(tk.type == CONST){
+        if(tk.lexeme == "FLOAT"){
+            type = FLOAT;
+            float_val = tk.float_val;
+        }
+        else if(tk.lexeme == "INT"){
+            type = INT;
+            int_val = tk.int_val;
+        }
+        else if(tk.lexeme == "CHAR"){
+            type = CHAR;
+            int_val = tk.int_val;
+        }
+    }
+    else if(tk.type == INT){
+        type = INT;
+        int_val = tokens[var_name[tk.lexeme]].int_val;
+    }
+    else if(tk.type == FLOAT){
+        type = FLOAT;
+        float_val = tokens[var_name[tk.lexeme]].float_val;
+    }
+    else if(tk.type == CHAR){
+        type = CHAR;
+        int_val = tokens[var_name[tk.lexeme]].int_val;
+    }
+    else if(tk.type >= ASSIGN && tk.type <= CONST){
+        if(tk.flag == INT){
+            type = INT;
+            int_val = tk.int_val;
+        }
+        else if(tk.flag == FLOAT){
+            type = FLOAT;
+            float_val = tk.float_val;
+        }
+        else if(tk.flag == CHAR){
+            type = CHAR;
+            int_val = tk.int_val;
+        }
+    }
+    else{
+        cout << "Error in check_val()" << endl;
+    }
+}
+
 int sentence(AST_node* &start, int end){
     while(tokens[parser_index].type != EOF_){
         if(tokens[parser_index].type == SEMICOLON && end == 2) return 0;
@@ -328,11 +375,7 @@ int lexer(ifstream &file){
             else if(line[cur] == '\t') continue;
             else if(isalpha(line[cur])){
                 string word = get_this_word(line, cur);
-                if(var_name.find(word) != var_name.end()){
-                    add_token(line_num, tokens[var_name[word]].type, 0, 0, word);
-                    cur += word.size() - 1;
-                }
-                else if(word == "while"){
+                if(word == "while"){
                     add_token(line_num, WHILE, 0, 0, word);
                     cur += word.size() - 1;
                 }
@@ -388,6 +431,10 @@ int lexer(ifstream &file){
                         }
                     }
                 }
+                else if(var_name.find(word) != var_name.end()){
+                    add_token(line_num, tokens[var_name[word]].type, 0, 0, word);
+                    cur += word.size() - 1;
+                }
             }
             else if(isdigit(line[cur])){
                 float f = 0;
@@ -402,7 +449,7 @@ int lexer(ifstream &file){
                     cur += size - 1;
                 }
                 else{
-                    add_token(line_num, INT, CONST, num, "INT");
+                    add_token(line_num, CONST,f , num, "INT");
                     cur += size - 1;
                 }
             }
@@ -561,7 +608,15 @@ int parser(AST_node* &cur_head){
 
 void ast_dfs(AST_node* node) {
     if (node == nullptr) return;
-    if(node -> val.type == FOR){
+    if(node -> val.type == INT || node -> val.type == FLOAT || node -> val.type == CHAR || node -> val.type == STRING || node -> val.type == CONST){
+        return;
+    }
+    else if(node -> val.type == START){
+        for(int i = 0; i < node -> size; i++){
+            ast_dfs(node -> nodes[i]);
+        }
+    }
+    else if(node -> val.type == FOR){
         ast_dfs(node -> nodes[0]);
         while(1){
             ast_dfs(node -> nodes[1]);
@@ -590,53 +645,74 @@ void ast_dfs(AST_node* node) {
         ast_dfs(node -> nodes[1]);
         if(node -> nodes[0] -> val.type == INT){
             int val;
-            if(node -> nodes[1] -> val.type == FLOAT){
-                int val = (int)node -> nodes[1] -> val.float_val;
+            int type = 0;
+            int int_val = 0;
+            float float_val = 0;
+            check_val(type, int_val, float_val, node -> nodes[1] -> val);
+            if(type == INT){
+                val = int_val;
             }
-            else{
-                val = node -> nodes[1] -> val.int_val;
+            else if(type == FLOAT){
+                val = (int)float_val;
             }
-            var_name[node -> nodes[0] -> val.lexeme] = val;
-            node -> val.int_val = val;
+            tokens[var_name[node -> nodes[0] -> val.lexeme]].int_val = val;
         }
         else if(node -> nodes[0] -> val.type == FLOAT){
             float val;
-            if(node -> nodes[1] -> val.type == INT){
-                val = (float)node -> nodes[1] -> val.int_val;
+            int type = 0;
+            int int_val = 0;
+            float float_val = 0;
+            check_val(type, int_val, float_val, node -> nodes[1] -> val);
+            if(type == INT){
+                val = int_val;
             }
-            else{
-                val = node -> nodes[1] -> val.float_val;
+            else if(type == FLOAT){
+                val = float_val;
             }
-            var_name[node -> nodes[0] -> val.lexeme] = val;
-            node -> val.float_val = val;
+            tokens[var_name[node -> nodes[0] -> val.lexeme]].float_val = val;
         }
         else if(node -> nodes[0] -> val.type == CHAR){
             int val;
-            if(node -> nodes[1] -> val.type == FLOAT){
-                int val = (int)node -> nodes[1] -> val.float_val;
+            int type = 0;
+            int int_val = 0;
+            float float_val = 0;
+            check_val(type, int_val, float_val, node -> nodes[1] -> val);
+            if(type == INT){
+                val = int_val;
             }
-            else{
-                val = node -> nodes[1] -> val.int_val;
+            else if(type == FLOAT){
+                val = (int)float_val;
             }
             val = abs(val % 256);
-            var_name[node -> nodes[0] -> val.lexeme] = val;
-            node -> val.int_val = val;
+            tokens[var_name[node -> nodes[0] -> val.lexeme]].int_val = val;
         }
     }
     else if(node -> val.type == ADD){
         ast_dfs(node -> nodes[0]);
         ast_dfs(node -> nodes[1]);
-        if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == INT){
-            node -> val.int_val = node -> nodes[0] -> val.int_val + node -> nodes[1] -> val.int_val;
+        int type1 = 0;
+        int int_val1 = 0;
+        float float_val1 = 0;
+        check_val(type1, int_val1, float_val1, node -> nodes[0] -> val);
+        int type2 = 0;
+        int int_val2 = 0;
+        float float_val2 = 0;
+        check_val(type2, int_val2, float_val2, node -> nodes[1] -> val);
+        if(type1 == INT && type2 == INT){
+            node -> val.int_val = int_val1 + int_val2;
+            node -> val.flag = INT;
         }
-        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == FLOAT){
-            node -> val.float_val = node -> nodes[0] -> val.float_val + node -> nodes[1] -> val.float_val;
+        else if(type1 == FLOAT && type2 == FLOAT){
+            node -> val.float_val = float_val1 + float_val2;
+            node -> val.flag = FLOAT;
         }
-        else if(node -> nodes[0] -> val.type == INT && node -> nodes[1] -> val.type == FLOAT){
-            node -> val.float_val = node -> nodes[0] -> val.int_val + node -> nodes[1] -> val.float_val;
+        else if(type1 == INT && type2 == FLOAT){
+            node -> val.float_val = int_val1 + float_val2;
+            node -> val.flag = FLOAT;
         }
-        else if(node -> nodes[0] -> val.type == FLOAT && node -> nodes[1] -> val.type == INT){
-            node -> val.float_val = node -> nodes[0] -> val.float_val + node -> nodes[1] -> val.int_val;
+        else if(type1 == FLOAT && type2 == INT){
+            node -> val.float_val = float_val1 + int_val2;
+            node -> val.flag = FLOAT;
         }
     }
     else if(node -> val.type == SUB){
@@ -953,14 +1029,6 @@ void ast_dfs(AST_node* node) {
             node -> val.int_val = (int)node -> nodes[0] -> val.float_val >> node -> nodes[1] -> val.int_val;
         }
     }
-    else if(node -> val.type == INT || node -> val.type == FLOAT || node -> val.type == CHAR || node -> val.type == STRING){
-        return;
-    }
-    else if(node -> val.type == START){
-        for(int i = 0; i < node -> size; i++){
-            ast_dfs(node -> nodes[i]);
-        }
-    }
 }
 
 int main(int argc, char* argv[]) {
@@ -1063,6 +1131,7 @@ int main(int argc, char* argv[]) {
     for (const auto& var : var_name) {
         cout << var_name[var.first] << " " << tokens[var_name[var.first]].int_val << " " << tokens[var_name[var.first]].float_val << endl;
     }
+
 
     // safe exit
 
