@@ -17,6 +17,8 @@ bool mode_token = false;
 bool mode_ast = false;
 bool mode_code = false;
 
+string string_helper;
+
 enum token_type {
     IF, ELSE, ELSE_IF, WHILE, FOR,
 
@@ -90,7 +92,9 @@ vector<key_word> key_words = {
     {"START", START},
     {"break", BREAK},
     {"continue", CONTINUE},
-    {"//", EXPLAIN}
+    {"//", EXPLAIN},
+    {"\"", STRING},
+    {"'", CHAR}
 };
 
 union value{
@@ -139,6 +143,8 @@ vector<value> values;
 
 vector<var> vars;
 
+vector<string> string_pool;
+
 string get_word(string &line, int &index) {
     string word;
     if(isalpha(line[index]) || line[index] == '_') {
@@ -166,6 +172,20 @@ string get_word(string &line, int &index) {
         for(auto &key_word : key_words) {
             if(key_word.word == temp) {
                 word = temp;
+                if(word == "\"") {
+                    index++;
+                    while(line[index] != '\"') {
+                        string_helper += line[index];
+                        index++;
+                        if(index >= line.size()) return "OUT_OF_BOUND";
+                    }
+                    index++;
+                }
+                else if(word == "'") {
+                    index += 2;
+                    if(index >= line.size()) return "OUT_OF_BOUND";
+                    string_helper += line[index - 1];
+                }
                 index++;
                 return word;
             }
@@ -233,15 +253,26 @@ err_info insert_tokens(string word, int line_num, int index) {
         if(key_word.word == word) {
             token new_token(line_num, index - word.size(), -1, 0, key_word.type, word);
             tokens.push_back(new_token);
-            if(key_word.lexeme == "("){
-                if(tokens.size() == 1) return {true, line_num, index - word.size(), word, ""};
-                else{
+            if(key_word.word == "("){
+                if(tokens.size() >= 1){
                     if(tokens[tokens.size() - 2].type == INT || tokens[tokens.size() - 2].type == FLOAT || tokens[tokens.size() - 2].type == CHAR || tokens[tokens.size() - 2].type == STRING){
-                        token new_token(line_num, index - word.size(), -1, 0, FUNC, word);
-                        tokens.pop_back();
-                        tokens.push_back(new_token);
+                        tokens[tokens.size() - 1].type = FUNC;
                     }
+                    return {false, 0, 0, "", ""};
                 }
+            }
+            else if(key_word.word == "'"){
+                if(string_helper.size() != 1) return {true, line_num, index - word.size(), word, ""};
+                value val = value((char)(string_helper[0]));
+                values.push_back(val);
+                return {false, 0, 0, "", ""};
+            }
+            else if(key_word.word == "\""){
+                string_pool.push_back(string_helper);
+                value val(int(string_pool.size() - 1));
+                values.push_back(val);
+                string_helper = "";
+                return {false, 0, 0, "", ""};
             }
             return {false, 0, 0, "", ""};
         }
@@ -291,6 +322,8 @@ err_info lexer(ifstream &input_file) {
                 continue;
             }
             string cur = get_word(line, index);
+            if(cur == "OUT_OF_BOUND") return {true, line_num, index, "", ""};
+            if(cur == "//") break;
             err_info err = insert_tokens(cur, line_num, index);
             if(err.err) return err;
             if(cur.size() == 0) return {true, line_num, index, "", ""};
@@ -351,7 +384,7 @@ int main(int argc, char* argv[]) {
     if(mode_token){
         cout << "Tokens:" << endl;
         for (const auto& tok : tokens) {
-            cout << "Line: " << tok.line << ", Index: " << tok.index << ", Type: " << tok.type << ", Val Type: " << tok.val_type << ", Val: " << tok.val << endl;
+            cout << "Line: " << tok.line << ", Index: " << tok.index << ", Type: " << tok.type << ", Val Type: " << tok.val_type << ", Val: " << tok.val << ", Lexeme: " << tok.lexeme << endl;
         }
 
         cout << "Values:" << endl;
