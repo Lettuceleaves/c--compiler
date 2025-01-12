@@ -92,6 +92,52 @@ vector<key_word> key_words = {
     {"//", EXPLAIN}
 };
 
+union value{
+    int int_val;
+    float float_val;
+    char char_val;
+    value() {};
+    ~value() {};
+    value(int i) : int_val(i) {};
+    value(float f) : float_val(f) {};
+    value(char c) : char_val(c) {};
+};
+
+struct token {
+    int line = -1;
+    int index = -1;
+    int val_type = -1;
+    int val = -1;
+    int type = -1;
+    string lexeme;
+    token() {};
+    ~token() {};
+    token(int l, int i, int vt, int v, int t, string lex) : line(l), index(i), val_type(vt), val(v), type(t), lexeme(lex) {};
+};
+
+struct var {
+    string name;
+    int type;
+    int val;
+    var() {};
+    ~var() {};
+    var(string n, int t, int v) : name(n), type(t), val(v) {};
+};
+
+struct err_info{
+    bool err;
+    int line;
+    int index;
+    string part;
+    string word;
+};
+
+vector<token> tokens;
+
+vector<value> values;
+
+vector<var> vars;
+
 string get_word(string &line, int &index) {
     string word;
     if(isalpha(line[index]) || line[index] == '_') {
@@ -136,52 +182,6 @@ string get_word(string &line, int &index) {
     }
     return word;
 }
-
-struct token {
-    int line = -1;
-    int index = -1;
-    int val_type = -1;
-    int val = -1;
-    int type = -1;
-    string lexeme;
-    token() {};
-    ~token() {};
-    token(int l, int i, int vt, int v, int t, string lex) : line(l), index(i), val_type(vt), val(v), type(t), lexeme(lex) {};
-};
-
-union value{
-    int int_val;
-    float float_val;
-    char char_val;
-    value() {};
-    ~value() {};
-    value(int i) : int_val(i) {};
-    value(float f) : float_val(f) {};
-    value(char c) : char_val(c) {};
-};
-
-struct var {
-    string name;
-    int type;
-    int val;
-    var() {};
-    ~var() {};
-    var(string n, int t, int v) : name(n), type(t), val(v) {};
-};
-
-struct err_info{
-    bool err;
-    int line;
-    int index;
-    string part;
-    string word;
-};
-
-vector<token> tokens;
-
-vector<value> values;
-
-vector<var> vars;
 
 float string_to_float(string s) {
     float res = 0;
@@ -249,7 +249,7 @@ err_info insert_tokens(string word, int line_num, int index) {
     else if(isalpha(word[0]) || word[0] == '_') {
         if(tokens.size() >= 1){
             if(tokens[tokens.size() - 1].lexeme == "int" || tokens[tokens.size() - 1].lexeme == "float" || tokens[tokens.size() - 1].lexeme == "char" || tokens[tokens.size() - 1].lexeme == "string") {
-                var new_var(word, tokens[tokens.size() - 1].type, values.size());
+                var new_var(word, tokens[tokens.size() - 1].type, 0);
                 vars.push_back(new_var);
                 map<string, int> type_map = {{"int", INT}, {"float", FLOAT}, {"char", CHAR}, {"string", STRING}};
                 token new_token(line_num, index - word.size(), type_map[tokens[tokens.size() - 1].lexeme], 0, tokens[tokens.size() - 1].type, word);
@@ -258,7 +258,7 @@ err_info insert_tokens(string word, int line_num, int index) {
             else{
                 for(int i = vars.size() - 1; i >= 0; i--) {
                     if(vars[i].name == word) {
-                        token new_token(line_num, index - word.size(), vars[i].type, vars[i].val, vars[i].type, word);
+                        token new_token(line_num, index - word.size(), vars[i].type, 0, vars[i].type, word);
                         tokens.push_back(new_token);
                         return {false, 0, 0, "", ""};
                     }
@@ -269,7 +269,7 @@ err_info insert_tokens(string word, int line_num, int index) {
         else{
             for(int i = vars.size() - 1; i >= 0; i--) {
                 if(vars[i].name == word) {
-                    token new_token(line_num, index - word.size(), vars[i].type, vars[i].val, vars[i].type, word);
+                    token new_token(line_num, index - word.size(), vars[i].type, 0, vars[i].type, word);
                     tokens.push_back(new_token);
                     return {false, 0, 0, "", ""};
                 }
@@ -340,7 +340,7 @@ int main(int argc, char* argv[]) {
 
     // cout code if choose the mode
 
-    if (mode_code) { string line; while (getline(input_file, line)) cout << line << endl; return 0;}
+    if (mode_code) { string line; cout << endl; while (getline(input_file, line)) cout << line << endl; cout << endl; return 0;}
 
     // lexer
 
