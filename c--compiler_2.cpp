@@ -35,7 +35,8 @@ enum token_type {
     INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST,
 
     EOF_, DOT, SEMICOLON, BACK_BRACKET,                     // EOF , ; )]}
-    RET, POINT, PRINT, START, BREAK, CONTINUE, EXPLAIN      // return . ([{ printf
+    RET, POINT, PRINT, START, BREAK, CONTINUE, EXPLAIN,     // return . ([{ printf
+    FUNC
 };
 
 struct key_word {
@@ -106,7 +107,7 @@ union value{
 struct token {
     int line = -1;
     int index = -1;
-    int val_type = -1;
+    int val_type = -1; // -2 save for var
     int val = -1;
     int type = -1;
     string lexeme;
@@ -232,6 +233,16 @@ err_info insert_tokens(string word, int line_num, int index) {
         if(key_word.word == word) {
             token new_token(line_num, index - word.size(), -1, 0, key_word.type, word);
             tokens.push_back(new_token);
+            if(key_word.lexeme == "("){
+                if(tokens.size() == 1) return {true, line_num, index - word.size(), word, ""};
+                else{
+                    if(tokens[tokens.size() - 2].type == INT || tokens[tokens.size() - 2].type == FLOAT || tokens[tokens.size() - 2].type == CHAR || tokens[tokens.size() - 2].type == STRING){
+                        token new_token(line_num, index - word.size(), -1, 0, FUNC, word);
+                        tokens.pop_back();
+                        tokens.push_back(new_token);
+                    }
+                }
+            }
             return {false, 0, 0, "", ""};
         }
     }
@@ -247,29 +258,17 @@ err_info insert_tokens(string word, int line_num, int index) {
         return {false, 0, 0, "", ""};
     }
     else if(isalpha(word[0]) || word[0] == '_') {
-        if(tokens.size() >= 1){
-            if(tokens[tokens.size() - 1].lexeme == "int" || tokens[tokens.size() - 1].lexeme == "float" || tokens[tokens.size() - 1].lexeme == "char" || tokens[tokens.size() - 1].lexeme == "string") {
-                var new_var(word, tokens[tokens.size() - 1].type, 0);
-                vars.push_back(new_var);
-                map<string, int> type_map = {{"int", INT}, {"float", FLOAT}, {"char", CHAR}, {"string", STRING}};
-                token new_token(line_num, index - word.size(), type_map[tokens[tokens.size() - 1].lexeme], 0, tokens[tokens.size() - 1].type, word);
-                return {false, 0, 0, "", ""};
-            }
-            else{
-                for(int i = vars.size() - 1; i >= 0; i--) {
-                    if(vars[i].name == word) {
-                        token new_token(line_num, index - word.size(), vars[i].type, 0, vars[i].type, word);
-                        tokens.push_back(new_token);
-                        return {false, 0, 0, "", ""};
-                    }
-                }
-                return {true, line_num, index - word.size(), word, ""};
-            }
+        if(tokens.size() >= 1 && (tokens[tokens.size() - 1].lexeme == "int" || tokens[tokens.size() - 1].lexeme == "float" || tokens[tokens.size() - 1].lexeme == "char" || tokens[tokens.size() - 1].lexeme == "string")) {
+            var new_var(word, tokens[tokens.size() - 1].type, 0);
+            vars.push_back(new_var);
+            map<string, int> type_map = {{"int", INT}, {"float", FLOAT}, {"char", CHAR}, {"string", STRING}};
+            token new_token(line_num, index - word.size(), type_map[tokens[tokens.size() - 1].lexeme], 0, tokens[tokens.size() - 1].type, word);
+            return {false, 0, 0, "", ""};
         }
         else{
             for(int i = vars.size() - 1; i >= 0; i--) {
                 if(vars[i].name == word) {
-                    token new_token(line_num, index - word.size(), vars[i].type, 0, vars[i].type, word);
+                    token new_token(line_num, index - word.size(), -2, 0, vars[i].type, word);
                     tokens.push_back(new_token);
                     return {false, 0, 0, "", ""};
                 }
