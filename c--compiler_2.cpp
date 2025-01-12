@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <fstream>
 #include <unordered_set>
+#include <map>
 #include <unordered_map>
 #include <functional>
 #include <math.h>
@@ -74,9 +75,13 @@ vector<key_word> key_words = {
     {"char", CHAR},
     {"string", STRING},
     {"(", FRONT_BRACKET},
+    {"[", FRONT_BRACKET},
+    {"{", FRONT_BRACKET},
     {"const", CONST},
     {".", DOT},
     {";", SEMICOLON},
+    {")", BACK_BRACKET},
+    {"]", BACK_BRACKET},
     {"}", BACK_BRACKET},
     {"return", RET},
     {".", POINT},
@@ -138,6 +143,10 @@ struct token {
     int val_type = -1;
     int val = -1;
     int type = -1;
+    string lexeme;
+    token() {};
+    ~token() {};
+    token(int l, int i, int vt, int v, int t, string lex) : line(l), index(i), val_type(vt), val(v), type(t), lexeme(lex) {};
 };
 
 union value{
@@ -155,6 +164,17 @@ struct var {
     string name;
     int type;
     int val;
+    var() {};
+    ~var() {};
+    var(string n, int t, int v) : name(n), type(t), val(v) {};
+};
+
+struct err_info{
+    bool err;
+    int line;
+    int index;
+    string part;
+    string word;
 };
 
 vector<token> tokens;
@@ -207,63 +227,60 @@ int string_to_int(string s) {
     return res;
 }
 
-void insert_tokens(string &word, int line_num, int index) {
-    if(word == "int" || word == "char" || word == "float" || word == "string") {
-        return;
-    }
+err_info insert_tokens(string word, int line_num, int index) {
     for(auto &key_word : key_words) {
         if(key_word.word == word) {
-            token new_token;
-            new_token.line = line_num;
-            new_token.index = index;
-            new_token.type = key_word.type;
+            token new_token(line_num, index - word.size(), -1, 0, key_word.type, word);
             tokens.push_back(new_token);
-            return;
+            return {false, 0, 0, "", ""};
         }
     }
-    token new_token;
-    new_token.line = line_num;
-    new_token.index = index;
     if(isdigit(word[0])) {
         if(word.find('.') != string::npos) {
-            new_token.type = FLOAT;
-            new_token.val_type = FLOAT;
-            new_token.val = values.size();
+            token new_token(line_num, index - word.size(), FLOAT, 0, FLOAT, word);
             values.push_back(string_to_float(word));
         }
         else {
-            new_token.type = INT;
-            new_token.val_type = INT;
-            new_token.val = values.size();
+            token new_token(line_num, index - word.size(), INT, 0, INT, word);
             values.push_back(string_to_int(word));
         }
+        return {false, 0, 0, "", ""};
     }
     else if(isalpha(word[0]) || word[0] == '_') {
-        new_token.type = CONST;
-        if(tokens.size() >= 2){
-            if(tokens[tokens.size() - 2].type == INT || tokens[tokens.size() - 2].type == FLOAT || tokens[tokens.size() - 2].type == CHAR || tokens[tokens.size() - 2].type == STRING) {
-                var new_var;
-                new_var.name = word;
-                new_var.type = tokens[tokens.size() - 2].type;
-                new_var.val = values.size();
+        if(tokens.size() >= 1){
+            if(tokens[tokens.size() - 1].lexeme == "int" || tokens[tokens.size() - 1].lexeme == "float" || tokens[tokens.size() - 1].lexeme == "char" || tokens[tokens.size() - 1].lexeme == "string") {
+                var new_var(word, tokens[tokens.size() - 1].type, values.size());
                 vars.push_back(new_var);
+                map<string, int> type_map = {{"int", INT}, {"float", FLOAT}, {"char", CHAR}, {"string", STRING}};
+                token new_token(line_num, index - word.size(), type_map[tokens[tokens.size() - 1].lexeme], 0, tokens[tokens.size() - 1].type, word);
+                return {false, 0, 0, "", ""};
+            }
+            else{
+                for(int i = vars.size() - 1; i >= 0; i--) {
+                    if(vars[i].name == word) {
+                        token new_token(line_num, index - word.size(), vars[i].type, vars[i].val, vars[i].type, word);
+                        tokens.push_back(new_token);
+                        return {false, 0, 0, "", ""};
+                    }
+                }
+                return {true, line_num, index - word.size(), word, ""};
             }
         }
         else{
-            for(auto &var : vars) {
-                if(var.name == word) {
-                    new_token.val_type = var.type;
-                    new_token.val = var.val;
-                    break;
+            for(int i = vars.size() - 1; i >= 0; i--) {
+                if(vars[i].name == word) {
+                    token new_token(line_num, index - word.size(), vars[i].type, vars[i].val, vars[i].type, word);
+                    tokens.push_back(new_token);
+                    return {false, 0, 0, "", ""};
                 }
             }
+            return {true, line_num, index - word.size(), word, ""};
         }
     }
-    tokens.push_back(new_token);
-    return;
+    return {true, line_num, index - word.size(), word, ""};
 }
 
-int lexer(ifstream &input_file) {
+err_info lexer(ifstream &input_file) {
     string line;
     int line_num = 0;
     while (getline(input_file, line)) {
@@ -275,12 +292,12 @@ int lexer(ifstream &input_file) {
                 continue;
             }
             string cur = get_word(line, index);
-            cout << cur << " ";
-            insert_tokens(cur, line_num, index);
-            if(index == len - 1) index++;
+            err_info err = insert_tokens(cur, line_num, index);
+            if(err.err) return err;
+            if(cur.size() == 0) return {true, line_num, index, "", ""};
         }
     }
-    return 0;
+    return {false, 0, 0, "", ""};
 }
 
 int main(int argc, char* argv[]) {
@@ -327,9 +344,9 @@ int main(int argc, char* argv[]) {
 
     // lexer
 
-    int lexer_err = lexer(input_file);
+    err_info err = lexer(input_file);
 
-    if(lexer_err != 0){ cout << " Error happened in line: " << lexer_err << endl; return -1;}
+    if(err.err) cout << "Error at line " << err.line << ", index " << err.index << ", " << err.part << ": " << err.word << endl;
     else cout << "Lexer runs successfully" << endl << endl;
 
     if(mode_token){
