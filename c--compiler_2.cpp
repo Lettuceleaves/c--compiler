@@ -137,6 +137,16 @@ struct err_info{
     string word;
 };
 
+struct AST_Node {
+    int token_index;
+    vector<AST_Node*> children;
+    AST_Node() {};
+    ~AST_Node() {};
+    AST_Node(int ti) : token_index(ti) {};
+};
+
+#define AST_Pointer AST_Node*;
+
 vector<token> tokens;
 
 vector<value> values;
@@ -304,10 +314,10 @@ err_info insert_tokens(string word, int line_num, int index) {
                     return {false, 0, 0, "", ""};
                 }
             }
-            return {true, line_num, index - word.size(), word, ""};
+            return {true, line_num, index - word.size(), "lexer", word};
         }
     }
-    return {true, line_num, index - word.size(), word, ""};
+    return {true, line_num, index - word.size(), "lexer", word};
 }
 
 err_info lexer(ifstream &input_file) {
@@ -322,14 +332,82 @@ err_info lexer(ifstream &input_file) {
                 continue;
             }
             string cur = get_word(line, index);
-            if(cur == "OUT_OF_BOUND") return {true, line_num, index, "", ""};
+            if(cur == "OUT_OF_BOUND") return {true, line_num, index, "lexer", cur};
             if(cur == "//") break;
             err_info err = insert_tokens(cur, line_num, index);
             if(err.err) return err;
-            if(cur.size() == 0) return {true, line_num, index, "", ""};
+            if(cur.size() == 0) return {true, line_num, index, "lexer", cur};
         }
     }
     return {false, 0, 0, "", ""};
+}
+
+int parser_cur_index = 0;
+
+AST_Node* AST_root;
+
+vector<int> sentence_elements = {-2, INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST};
+
+error_info parser_start() {
+    while()
+    return {false, 0, 0, "", ""};
+}
+
+err_info parser(AST_Node* &root) {
+    if(tokens[parser_cur_index].type == START){
+        err_info err = parser_start(root);
+        if(err.err) return err;
+    }
+    else if(tokens[parser_cur_index].type == FUNC){
+        err_info err = parser_func(root);
+        if(err.err) return err;
+    }
+    else if(tokens[parser_cur_index].type == RET){
+        err_info err = parser_ret(root);
+        if(err.err) return err;
+    }
+    else if(tokens[parser_cur_index].type == PRINT){
+        err_info err = parser_print(root);
+        if(err.err) return err;
+    }
+    else if(tokens[parser_cur_index].type == BREAK){
+        err_info err = parser_break(root);
+        if(err.err) return err;
+    }
+    else if(tokens[parser_cur_index].type == CONTINUE){
+        err_info err = parser_continue(root);
+        if(err.err) return err;
+    }
+    else if(sentence_elements.find(tokens[parser_cur_index].type) != sentence_elements.end()){
+        err_info err = parser_sentence(root);
+        if(err.err) return err;
+    }
+    else if(tokens[parser_cur_index].type == IF){
+        err_info err = parser_if(root);
+        if(err.err) return err;
+    }
+    else if(tokens[parser_cur_index].type == ELSE){
+        err_info err = parser_else(root);
+        if(err.err) return err;
+    }
+    else if(tokens[parser_cur_index].type == ELSE_IF){
+        err_info err = parser_else_if(root);
+        if(err.err) return err;
+    }
+    else if(tokens[parser_cur_index].type == WHILE){
+        err_info err = parser_while(root);
+        if(err.err) return err;
+    }
+    else if(tokens[parser_cur_index].type == FOR){
+        err_info err = parser_for(root);
+        if(err.err) return err;
+    }
+    else if(tokens[parser_cur_index].type == EOF_){
+        return {false, 0, 0, "", ""};
+    }
+    else{
+        return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -375,10 +453,13 @@ int main(int argc, char* argv[]) {
     if (mode_code) { string line; cout << endl; while (getline(input_file, line)) cout << line << endl; cout << endl; return 0;}
 
     // lexer
-
+    tokens.push_back(token(0, 0, -1, 0, START, "START"));
     err_info err = lexer(input_file);
 
-    if(err.err) cout << "Error at line " << err.line << ", index " << err.index << ", " << err.part << ": " << err.word << endl;
+    if(err.err){
+        cout << "Error at line " << err.line << ", index " << err.index << ", " << err.part << ": " << err.word << endl;
+        return 1;
+    }
     else cout << "Lexer runs successfully" << endl << endl;
 
     if(mode_token){
@@ -403,6 +484,16 @@ int main(int argc, char* argv[]) {
             cout << "Name: " << var.name << ", Type: " << var.type << ", Val: " << var.val << endl;
         }
     }
+
+    // parser
+    AST_root = new AST_Node(0);
+    err_info err = parser();
+
+    if(err.err){
+        cout << "Error at line " << err.line << ", index " << err.index << ", " << err.part << ": " << err.word << endl;
+        return 1;
+    }
+    else cout << "Parser runs successfully" << endl << endl;
 
     // safe exit
 
