@@ -267,6 +267,7 @@ err_info insert_tokens(string word, int line_num, int index) {
                 if(tokens.size() >= 1){
                     if(tokens[tokens.size() - 2].type == INT || tokens[tokens.size() - 2].type == FLOAT || tokens[tokens.size() - 2].type == CHAR || tokens[tokens.size() - 2].type == STRING){
                         tokens[tokens.size() - 1].type = FUNC;
+                        cout << "Number of commas: " << comma_count << endl;
                     }
                     return {false, 0, 0, "", ""};
                 }
@@ -348,8 +349,30 @@ AST_Node* AST_root;
 
 vector<int> sentence_elements = {-2, INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST};
 
-error_info parser_start() {
-    while()
+error_info parser_start(AST_Node* &root){
+    while(tokens[parser_cur_index].type != EOF){
+        err_info err = parser(root);
+        if(err.err) return err;
+    }
+    return {false, 0, 0, "", ""};
+}
+
+err_info parser_sentence(AST_Node* &root){
+    AST_Node* sentence_root = new AST_Node(parser_cur_index);
+    int end_type = SEMICOLON;
+    if(tokens[root->token_index].type == FRONT_BRACKET || tokens[root->token_index].type == WHILE || tokens[root->token_index].type == IF || tokens[root->token_index].type == ELSE_IF){
+        end_type = BACK_BRACKET;
+    }
+    else if(tokens[root->token_index].type == FOR && root->children.size() == 2){
+        end_type = BACK_BRACKET;
+    }
+    else if(tokens[root->token_index].type == FUNC){
+        if()
+    }
+    while(tokens[parser_cur_index].type != end_type){
+        parser_cur_index++;
+    }
+    if(err.err) return err;
     return {false, 0, 0, "", ""};
 }
 
