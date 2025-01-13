@@ -3,6 +3,7 @@
 #include <vector>
 #include <queue>
 #include <string>
+#include <set>
 #include <algorithm>
 #include <fstream>
 #include <unordered_set>
@@ -16,6 +17,37 @@ using namespace std;
 bool mode_token = false;
 bool mode_ast = false;
 bool mode_code = false;
+
+// class declarations
+
+struct token;
+struct AST_Node;
+union value;
+struct var;
+struct err_info;
+
+// function declarations
+
+string get_word(string &line, int &index);
+float string_to_float(string s);
+int string_to_int(string s);
+err_info insert_tokens(string word, int line_num, int index);
+err_info lexer(ifstream &input_file);
+err_info parser_start(AST_Node* &root);
+err_info parser_sentence(AST_Node* &root);
+err_info parser_func(AST_Node* &root);
+err_info parser_ret(AST_Node* &root);
+err_info parser_print(AST_Node* &root);
+err_info parser_for(AST_Node* &root);
+err_info parser_if(AST_Node* &root);
+err_info parser_else(AST_Node* &root);
+err_info parser_else_if(AST_Node* &root);
+err_info parser_while(AST_Node* &root);
+err_info parser_break(AST_Node* &root);
+err_info parser_continue(AST_Node* &root);
+err_info parser(AST_Node* &root);
+err_info insert_word_in_sentence(AST_Node* &root);
+
 
 string string_helper;
 
@@ -36,8 +68,8 @@ enum token_type {
     LOG_NOT, OPPO,                                          // ! ~
     INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST,
 
-    EOF_, DOT, SEMICOLON, BACK_BRACKET,                     // EOF , ; )]}
-    RET, POINT, PRINT, START, BREAK, CONTINUE, EXPLAIN,     // return . ([{ printf
+    EOF_, COMMA, SEMICOLON, BACK_BRACKET,                     // EOF , ; )]}
+    RET, DOT, PRINT, START, BREAK, CONTINUE, EXPLAIN,     // return . ([{ printf
     FUNC
 };
 
@@ -81,13 +113,13 @@ vector<key_word> key_words = {
     {"[", FRONT_BRACKET},
     {"{", FRONT_BRACKET},
     {"const", CONST},
-    {".", DOT},
     {";", SEMICOLON},
     {")", BACK_BRACKET},
     {"]", BACK_BRACKET},
     {"}", BACK_BRACKET},
     {"return", RET},
-    {".", POINT},
+    {".", DOT},
+    {",", COMMA},
     {"printf", PRINT},
     {"START", START},
     {"break", BREAK},
@@ -267,7 +299,6 @@ err_info insert_tokens(string word, int line_num, int index) {
                 if(tokens.size() >= 1){
                     if(tokens[tokens.size() - 2].type == INT || tokens[tokens.size() - 2].type == FLOAT || tokens[tokens.size() - 2].type == CHAR || tokens[tokens.size() - 2].type == STRING){
                         tokens[tokens.size() - 1].type = FUNC;
-                        cout << "Number of commas: " << comma_count << endl;
                     }
                     return {false, 0, 0, "", ""};
                 }
@@ -347,12 +378,48 @@ int parser_cur_index = 0;
 
 AST_Node* AST_root;
 
-vector<int> sentence_elements = {-2, INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST};
+set<int> sentence_elements = {-2, INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST};
 
-error_info parser_start(AST_Node* &root){
+err_info parser_start(AST_Node* &root){
     while(tokens[parser_cur_index].type != EOF){
         err_info err = parser(root);
         if(err.err) return err;
+    }
+    return {false, 0, 0, "", ""};
+}
+
+unordered_map<int, int> word_priority = {
+    {ASSIGN, 1}, // =
+    {LOG_OR, 2}, // ||
+    {LOG_AND, 3}, // &&
+    {OR, 4}, // |
+    {XOR, 5}, // ^
+    {AND, 6}, // &
+    {EQUAL, 7}, {NOT, 7}, // == !=
+    {LESS, 8}, {LESS_EQUAL, 8}, {GREATER, 8}, {GREATER_EQUAL, 8}, // < <= > >= 
+    {LEFT_MOVE, 9}, {RIGHT_MOVE, 9}, // << >>
+    {ADD, 10}, {SUB, 10}, // + -
+    {MUL, 11}, {DIV, 11}, {MOD, 11}, // * / %
+    {LOG_NOT, 12}, {OPPO, 12}, // ! ~
+    {INT, 13}, {FLOAT, 13}, {CHAR, 13}, {STRING, 13}, {FRONT_BRACKET, 13}, {CONST, 13} // int float char string ( const
+};
+
+err_info insert_word_in_sentence(AST_Node* &root) {
+    int cur_priority = word_priority[tokens[root->token_index].type];
+    int root_priority = word_priority[tokens[root->token_index].type];
+    if(cur_priority < root_priority){
+        AST_Node* new_node = new AST_Node(parser_cur_index);
+        new_node->children.push_back(root);
+        root = new_node;
+    }
+    else{
+        AST_Node* cur = root;
+        while(cur->children.size() > 0 && cur_priority >= word_priority[tokens[cur->children[cur->children.size() - 1]->token_index].type]){
+            cur = cur->children[cur->children.size() - 1];
+            if(cur == nullptr) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
+        }
+        AST_Node* new_node = new AST_Node(parser_cur_index);
+        cur->children.push_back(new_node);
     }
     return {false, 0, 0, "", ""};
 }
@@ -367,14 +434,39 @@ err_info parser_sentence(AST_Node* &root){
         end_type = BACK_BRACKET;
     }
     else if(tokens[root->token_index].type == FUNC){
-        if()
+        if(root->children.size() < values[tokens[parser_cur_index].val].int_val){
+            end_type = COMMA;
+        }
+        else if(root->children.size() == values[tokens[parser_cur_index].val].int_val){
+            end_type = BACK_BRACKET;
+        }
     }
     while(tokens[parser_cur_index].type != end_type){
-        parser_cur_index++;
+        err_info err = insert_word_in_sentence(sentence_root);
+        if(err.err) return err;
     }
-    if(err.err) return err;
     return {false, 0, 0, "", ""};
 }
+
+err_info parser_func(AST_Node* &root){return {false, 0, 0, "", ""};}
+    
+err_info parser_ret(AST_Node* &root){return {false, 0, 0, "", ""};}
+
+err_info parser_print(AST_Node* &root){return {false, 0, 0, "", ""};}
+
+err_info parser_for(AST_Node* &root){return {false, 0, 0, "", ""};}
+
+err_info parser_if(AST_Node* &root){return {false, 0, 0, "", ""};}
+
+err_info parser_else(AST_Node* &root){return {false, 0, 0, "", ""};}
+
+err_info parser_else_if(AST_Node* &root){return {false, 0, 0, "", ""};}
+
+err_info parser_while(AST_Node* &root){return {false, 0, 0, "", ""};}
+
+err_info parser_break(AST_Node* &root){return {false, 0, 0, "", ""};}
+
+err_info parser_continue(AST_Node* &root){return {false, 0, 0, "", ""};}
 
 err_info parser(AST_Node* &root) {
     if(tokens[parser_cur_index].type == START){
@@ -401,7 +493,7 @@ err_info parser(AST_Node* &root) {
         err_info err = parser_continue(root);
         if(err.err) return err;
     }
-    else if(sentence_elements.find(tokens[parser_cur_index].type) != sentence_elements.end()){
+    else if(sentence_elements.find(tokens[parser_cur_index].type) != sentence_elements.end() && (tokens[parser_cur_index + 1].type != FUNC)){
         err_info err = parser_sentence(root);
         if(err.err) return err;
     }
@@ -475,9 +567,11 @@ int main(int argc, char* argv[]) {
 
     if (mode_code) { string line; cout << endl; while (getline(input_file, line)) cout << line << endl; cout << endl; return 0;}
 
+    err_info err;
+
     // lexer
     tokens.push_back(token(0, 0, -1, 0, START, "START"));
-    err_info err = lexer(input_file);
+    err = lexer(input_file);
 
     if(err.err){
         cout << "Error at line " << err.line << ", index " << err.index << ", " << err.part << ": " << err.word << endl;
@@ -510,7 +604,7 @@ int main(int argc, char* argv[]) {
 
     // parser
     AST_root = new AST_Node(0);
-    err_info err = parser();
+    err = parser(AST_root);
 
     if(err.err){
         cout << "Error at line " << err.line << ", index " << err.index << ", " << err.part << ": " << err.word << endl;
