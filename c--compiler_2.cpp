@@ -322,10 +322,12 @@ err_info insert_tokens(string word, int line_num, int index) {
     if(isdigit(word[0])) {
         if(word.find('.') != string::npos) {
             token new_token(line_num, index - word.size(), FLOAT, 0, FLOAT, word);
+            tokens.push_back(new_token);
             values.push_back(string_to_float(word));
         }
         else {
             token new_token(line_num, index - word.size(), INT, 0, INT, word);
+            tokens.push_back(new_token);
             values.push_back(string_to_int(word));
         }
         return {false, 0, 0, "", ""};
@@ -336,6 +338,7 @@ err_info insert_tokens(string word, int line_num, int index) {
             vars.push_back(new_var);
             map<string, int> type_map = {{"int", INT}, {"float", FLOAT}, {"char", CHAR}, {"string", STRING}};
             token new_token(line_num, index - word.size(), type_map[tokens[tokens.size() - 1].lexeme], 0, tokens[tokens.size() - 1].type, word);
+            tokens.push_back(new_token);
             return {false, 0, 0, "", ""};
         }
         else{
@@ -381,6 +384,7 @@ AST_Node* AST_root;
 set<int> sentence_elements = {-2, INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST};
 
 err_info parser_start(AST_Node* &root){
+    parser_cur_index++;
     while(tokens[parser_cur_index].type != EOF){
         err_info err = parser(root);
         if(err.err) return err;
@@ -421,6 +425,7 @@ err_info insert_word_in_sentence(AST_Node* &root) {
         AST_Node* new_node = new AST_Node(parser_cur_index);
         cur->children.push_back(new_node);
     }
+    parser_cur_index++;
     return {false, 0, 0, "", ""};
 }
 
@@ -445,6 +450,8 @@ err_info parser_sentence(AST_Node* &root){
         err_info err = insert_word_in_sentence(sentence_root);
         if(err.err) return err;
     }
+    root->children.push_back(sentence_root);
+    parser_cur_index++;
     return {false, 0, 0, "", ""};
 }
 
