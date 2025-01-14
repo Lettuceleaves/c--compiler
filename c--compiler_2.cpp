@@ -66,11 +66,11 @@ enum token_type {
     ADD, SUB,                                               // + -
     MUL, DIV, MOD,                                          // * / %
     LOG_NOT, OPPO,                                          // ! ~
-    INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST,
+    FRONT_BRACKET, CONST,
 
     EOF_, COMMA, SEMICOLON, BACK_BRACKET,                     // EOF , ; )]}
     RET, DOT, PRINT, START, BREAK, CONTINUE, EXPLAIN,     // return . ([{ printf
-    FUNC
+    FUNC, INT, FLOAT, CHAR, STRING
 };
 
 struct key_word {
@@ -374,6 +374,7 @@ err_info lexer(ifstream &input_file) {
             if(cur.size() == 0) return {true, line_num, index, "lexer", cur};
         }
     }
+    tokens.push_back(token(line_num, 0, -1, 0, EOF_, "EOF"));
     return {false, 0, 0, "", ""};
 }
 
@@ -385,7 +386,7 @@ set<int> sentence_elements = {-2, INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST
 
 err_info parser_start(AST_Node* &root){
     parser_cur_index++;
-    while(tokens[parser_cur_index].type != EOF){
+    while(tokens[parser_cur_index].type != EOF_){
         err_info err = parser(root);
         if(err.err) return err;
     }
@@ -405,11 +406,11 @@ unordered_map<int, int> word_priority = {
     {ADD, 10}, {SUB, 10}, // + -
     {MUL, 11}, {DIV, 11}, {MOD, 11}, // * / %
     {LOG_NOT, 12}, {OPPO, 12}, // ! ~
-    {INT, 13}, {FLOAT, 13}, {CHAR, 13}, {STRING, 13}, {FRONT_BRACKET, 13}, {CONST, 13} // int float char string ( const
+    {FRONT_BRACKET, 13}, {CONST, 13} // int float char string ( const
 };
 
 err_info insert_word_in_sentence(AST_Node* &root) {
-    int cur_priority = word_priority[tokens[root->token_index].type];
+    int cur_priority = word_priority[tokens[parser_cur_index].type];
     int root_priority = word_priority[tokens[root->token_index].type];
     if(cur_priority < root_priority){
         AST_Node* new_node = new AST_Node(parser_cur_index);
@@ -418,12 +419,17 @@ err_info insert_word_in_sentence(AST_Node* &root) {
     }
     else{
         AST_Node* cur = root;
-        while(cur->children.size() > 0 && cur_priority >= word_priority[tokens[cur->children[cur->children.size() - 1]->token_index].type]){
+        while(cur->children.size() == 2 && cur_priority >= word_priority[tokens[cur->children[cur->children.size() - 1]->token_index].type]){
             cur = cur->children[cur->children.size() - 1];
             if(cur == nullptr) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
         }
         AST_Node* new_node = new AST_Node(parser_cur_index);
-        cur->children.push_back(new_node);
+        if(cur->children.size() == 2){
+            AST_Node* temp = cur->children[1];
+            cur->children[1] = new_node;
+            new_node->children.push_back(temp);
+        }
+        else cur->children.push_back(new_node);
     }
     parser_cur_index++;
     return {false, 0, 0, "", ""};
@@ -447,6 +453,10 @@ err_info parser_sentence(AST_Node* &root){
         }
     }
     while(tokens[parser_cur_index].type != end_type){
+        if(tokens[parser_cur_index].type == INT || tokens[parser_cur_index].type == FLOAT || tokens[parser_cur_index].type == CHAR || tokens[parser_cur_index].type == STRING){
+            aa
+            if(err.err) return err;
+        }
         err_info err = insert_word_in_sentence(sentence_root);
         if(err.err) return err;
     }
@@ -455,25 +465,25 @@ err_info parser_sentence(AST_Node* &root){
     return {false, 0, 0, "", ""};
 }
 
-err_info parser_func(AST_Node* &root){return {false, 0, 0, "", ""};}
+err_info parser_func(AST_Node* &root){parser_cur_index++; return {false, 0, 0, "", ""};}
     
-err_info parser_ret(AST_Node* &root){return {false, 0, 0, "", ""};}
+err_info parser_ret(AST_Node* &root){parser_cur_index++; return {false, 0, 0, "", ""};}
 
-err_info parser_print(AST_Node* &root){return {false, 0, 0, "", ""};}
+err_info parser_print(AST_Node* &root){parser_cur_index++; return {false, 0, 0, "", ""};}
 
-err_info parser_for(AST_Node* &root){return {false, 0, 0, "", ""};}
+err_info parser_for(AST_Node* &root){parser_cur_index++; return {false, 0, 0, "", ""};}
 
-err_info parser_if(AST_Node* &root){return {false, 0, 0, "", ""};}
+err_info parser_if(AST_Node* &root){parser_cur_index++; return {false, 0, 0, "", ""};}
 
-err_info parser_else(AST_Node* &root){return {false, 0, 0, "", ""};}
+err_info parser_else(AST_Node* &root){parser_cur_index++; return {false, 0, 0, "", ""};}
 
-err_info parser_else_if(AST_Node* &root){return {false, 0, 0, "", ""};}
+err_info parser_else_if(AST_Node* &root){parser_cur_index++; return {false, 0, 0, "", ""};}
 
-err_info parser_while(AST_Node* &root){return {false, 0, 0, "", ""};}
+err_info parser_while(AST_Node* &root){parser_cur_index++; return {false, 0, 0, "", ""};}
 
-err_info parser_break(AST_Node* &root){return {false, 0, 0, "", ""};}
+err_info parser_break(AST_Node* &root){parser_cur_index++; return {false, 0, 0, "", ""};}
 
-err_info parser_continue(AST_Node* &root){return {false, 0, 0, "", ""};}
+err_info parser_continue(AST_Node* &root){parser_cur_index++; return {false, 0, 0, "", ""};}
 
 err_info parser(AST_Node* &root) {
     if(tokens[parser_cur_index].type == START){
@@ -530,6 +540,7 @@ err_info parser(AST_Node* &root) {
     else{
         return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     }
+    return {false, 0, 0, "", ""};
 }
 
 int main(int argc, char* argv[]) {
@@ -618,6 +629,19 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     else cout << "Parser runs successfully" << endl << endl;
+
+    if(mode_ast){
+        function<void(AST_Node*, int)> print_ast = [&](AST_Node* node, int depth) {
+            if (!node) return;
+            for (int i = 0; i < depth; ++i) cout << "  ";
+            cout << tokens[node->token_index].lexeme << endl;
+            for (auto child : node->children) {
+                print_ast(child, depth + 1);
+            }
+        };
+
+        print_ast(AST_root, 0);
+    }
 
     // safe exit
 
