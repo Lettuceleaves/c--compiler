@@ -364,12 +364,12 @@ err_info insert_tokens(string word, int line_num, int index) {
     }
     if(isdigit(word[0])) {
         if(word.find('.') != string::npos) {
-            token new_token(line_num, index - word.size(), FLOAT, 0, FLOAT, word);
+            token new_token(line_num, index - word.size(), FLOAT, 0, CONST, word);
             tokens.push_back(new_token);
             values.push_back(string_to_float(word));
         }
         else {
-            token new_token(line_num, index - word.size(), INT, 0, INT, word);
+            token new_token(line_num, index - word.size(), INT, 0, CONST, word);
             tokens.push_back(new_token);
             values.push_back(string_to_int(word));
         }
@@ -457,7 +457,12 @@ unordered_map<int, int> word_priority = {
 
 err_info insert_word_in_sentence(AST_Node* &root) {
     int cur_priority = word_priority[tokens[parser_cur_index].type];
-    int root_priority = word_priority[tokens[root->token_index].type];
+    int root_priority;
+    if(root == nullptr){
+        root = new AST_Node(parser_cur_index);
+        return {false, 0, 0, "", ""};
+    }
+    else root_priority = word_priority[tokens[root->token_index].type];
     if(cur_priority < root_priority){
         AST_Node* new_node = new AST_Node(parser_cur_index);
         new_node->children.push_back(root);
@@ -482,7 +487,7 @@ err_info insert_word_in_sentence(AST_Node* &root) {
 }
 
 err_info parser_sentence(AST_Node* &root){
-    AST_Node* sentence_root = new AST_Node(parser_cur_index);
+    AST_Node* sentence_root = nullptr;
     int end_type = SEMICOLON;
     if(tokens[root->token_index].type == FRONT_BRACKET || tokens[root->token_index].type == WHILE || tokens[root->token_index].type == IF || tokens[root->token_index].type == ELSE_IF){
         end_type = BACK_BRACKET;
@@ -500,17 +505,16 @@ err_info parser_sentence(AST_Node* &root){
     }
     while(tokens[parser_cur_index].type != end_type){
         if(tokens[parser_cur_index].type == INT || tokens[parser_cur_index].type == FLOAT || tokens[parser_cur_index].type == CHAR || tokens[parser_cur_index].type == STRING){
-            if(tokens[parser_cur_index + 1].type != -2 || tokens[parser_cur_index + 1].type != FUNC) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
-            if(!values[tokens[parser_cur_index].val].area_val->insert_value(tokens[parser_cur_index + 1].lexeme, tokens[parser_cur_index].type)){
+            if(tokens[parser_cur_index + 1].type != -2 && tokens[parser_cur_index + 1].type != FUNC) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
+            if(!value_areas[tokens[root->token_index].val]->insert_value(tokens[parser_cur_index + 1].lexeme, tokens[parser_cur_index].type)){
                 return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
             }
             parser_cur_index++;
             continue;
         }
         else if(tokens[parser_cur_index].type == -2){
-            value val;
             int type;
-            if(!values[tokens[parser_cur_index].val].area_val->check_value(tokens[parser_cur_index].lexeme, type)){
+            if(!value_areas[tokens[root->token_index].val]->check_value(tokens[parser_cur_index].lexeme, tokens[parser_cur_index].type)){
                 return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
             }
             tokens[parser_cur_index].val_type = type;
@@ -619,7 +623,7 @@ err_info parser(AST_Node* &root) {
         err_info err = parser_continue(root);
         if(err.err) return err;
     }
-    else if(sentence_elements.find(tokens[parser_cur_index].type) != sentence_elements.end() && (tokens[parser_cur_index + 1].type != FUNC)){
+    else if((sentence_elements.find(tokens[parser_cur_index].type) != sentence_elements.end() && (tokens[parser_cur_index + 1].type != FUNC)) || tokens[parser_cur_index].type == INT || tokens[parser_cur_index].type == FLOAT || tokens[parser_cur_index].type == CHAR || tokens[parser_cur_index].type == STRING){
         err_info err = parser_sentence(root);
         if(err.err) return err;
     }
