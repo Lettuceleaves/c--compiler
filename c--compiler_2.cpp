@@ -67,11 +67,11 @@ enum token_type {
     ADD, SUB,                                               // + -
     MUL, DIV, MOD,                                          // * / %
     LOG_NOT, OPPO,                                          // ! ~
-    FRONT_BRACKET, CONST,
+    INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST,
 
     EOF_, COMMA, SEMICOLON, BACK_BRACKET,                     // EOF , ; )]}
     RET, DOT, PRINT, START, BREAK, CONTINUE, EXPLAIN,     // return . ([{ printf
-    FUNC, INT, FLOAT, CHAR, STRING
+    FUNC
 };
 
 struct key_word {
@@ -452,7 +452,7 @@ unordered_map<int, int> word_priority = {
     {ADD, 10}, {SUB, 10}, // + -
     {MUL, 11}, {DIV, 11}, {MOD, 11}, // * / %
     {LOG_NOT, 12}, {OPPO, 12}, // ! ~
-    {FRONT_BRACKET, 13}, {CONST, 13} // int float char string ( const
+    {INT, 13}, {FLOAT, 13}, {CHAR, 13}, {STRING, 13}, {FRONT_BRACKET, 13}, {CONST, 13} // int float char string ( const
 };
 
 err_info insert_word_in_sentence(AST_Node* &root) {
@@ -460,17 +460,18 @@ err_info insert_word_in_sentence(AST_Node* &root) {
     int root_priority;
     if(root == nullptr){
         root = new AST_Node(parser_cur_index);
+        parser_cur_index++;
         return {false, 0, 0, "", ""};
     }
     else root_priority = word_priority[tokens[root->token_index].type];
-    if(cur_priority < root_priority){
+    if(cur_priority <= root_priority){
         AST_Node* new_node = new AST_Node(parser_cur_index);
         new_node->children.push_back(root);
         root = new_node;
     }
     else{
         AST_Node* cur = root;
-        while(cur->children.size() == 2 && cur_priority >= word_priority[tokens[cur->children[cur->children.size() - 1]->token_index].type]){
+        while(cur->children.size() == 2 && cur_priority > word_priority[tokens[cur->children[cur->children.size() - 1]->token_index].type]){
             cur = cur->children[cur->children.size() - 1];
             if(cur == nullptr) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
         }
@@ -514,7 +515,7 @@ err_info parser_sentence(AST_Node* &root){
         }
         else if(tokens[parser_cur_index].type == -2){
             int type;
-            if(!value_areas[tokens[root->token_index].val]->check_value(tokens[parser_cur_index].lexeme, tokens[parser_cur_index].type)){
+            if(!value_areas[tokens[root->token_index].val]->check_value(tokens[parser_cur_index].lexeme, type)){
                 return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
             }
             tokens[parser_cur_index].val_type = type;
