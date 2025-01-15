@@ -1,1 +1,3 @@
-int a = 1 + !0 + 1 - 2;
+int main(int b){
+    int a = 1;
+}
