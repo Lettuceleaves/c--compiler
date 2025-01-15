@@ -182,6 +182,8 @@ struct AST_Node {
     AST_Node(int ti) : token_index(ti) {};
 };
 
+vector<pair<int, AST_Node*>> func_pool;
+
 class value_area {
 private:
     vector<value> values;
@@ -202,16 +204,13 @@ public:
         else if(type == FLOAT) val = value(0.0f);
         else if(type == CHAR) val = value('0');
         else if(type == STRING) val = value(0);
-        else if(type == FUNC) val = value((AST_Node* )nullptr);
+        else if(type == FUNC) {
+            func_pool.push_back({0, nullptr});
+            val = value(func_pool.size() - 1);
+        }
         else return false;
         values.push_back(val);
         return true;
-    }
-
-    void insert_circle(string name, AST_Node* continue_des, AST_Node* break_des){
-        vars[name] = {-1, -1};
-        values.push_back(continue_des);
-        values.push_back(break_des);
     }
 
     bool check_type(string name, int &type){
@@ -224,22 +223,26 @@ public:
     }
 
     bool check_value(string name, value &val){
-        if(vars.find(name) == vars.end() && !((name == "break" || name == "continue") && (vars.find("for") != vars.end() || vars.find("while") != vars.end()))){
-            if (upper) return upper->check_value(name, val);
+        val = values[vars[name].first];
+        return true;
+    }
+
+    bool set_value(token target, vector<value> val){
+        if(vars.find(target.lexeme) == vars.end()){
+            if (upper) return upper->set_value(target.lexeme, val);
             return false;
         }
-        if(name == "continue"){
-            val = values[0];
-            return true;
+        if(target.type == FUNC){
+            func_pool[values[vars[target.lexeme].first].int_val].first = val[0].int_val;
+            func_pool[values[vars[target.lexeme].first].int_val].second = val[1].ast_val;
         }
-        else if(name == "break"){
-            val = values[1];
-            return true;
+        else if(target.type == CONST){
+            values[vars[target.lexeme].first] = val[0];
         }
-        else{
-            val = values[vars[name].first];
-            return true;
+        else if(target.type == STRING){
+            string_pool[values[vars[target.lexeme].first].int_val] = string_pool[val[0].int_val];
         }
+        return true;
     }
 
     void set_upper(value_area* u){
@@ -251,13 +254,11 @@ public:
 
 vector<token> tokens;
 
-vector<value> values;
+vector<value> values; // record values of const in tokens except for string -- lexer
 
-vector<var> vars;
+vector<var> vars; // record vars in tokens to make pair -- lexer
 
-vector<string> string_pool;
-
-vector<pair<int, AST_Node*>> func_pool;
+vector<string> string_pool; // record strings in tokens -- lexer
 
 string get_word(string &line, int &index) {
     string word;
@@ -369,9 +370,8 @@ err_info insert_tokens(string word, int line_num, int index) {
             tokens.push_back(new_token);
             if(key_word.word == "("){
                 if(tokens.size() >= 1){
-                    if(tokens[tokens.size() - 2].type == INT || tokens[tokens.size() - 2].type == FLOAT || tokens[tokens.size() - 2].type == CHAR || tokens[tokens.size() - 2].type == STRING){
+                    if(tokens[tokens.size() - 2].type == -2){
                         tokens[tokens.size() - 1].type = FUNC;
-                        func_pool.push_back({0, nullptr});
                     }
                     return {false, 0, 0, "", ""};
                 }
@@ -488,6 +488,18 @@ unordered_map<int, int> word_priority = {
 err_info insert_word_in_sentence(AST_Node* &root) {
     int cur_priority = word_priority[tokens[parser_cur_index].type];
     int root_priority;
+    AST_Node* new_node = new AST_Node(parser_cur_index);
+    if(tokens[parser_cur_index].type == FUNC){
+        if(!value_areas[tokens[root->token_index].val]->set_value(tokens[parser_cur_index], {value(tokens[parser_cur_index].val), value(new_node)})){
+            return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
+        }
+        if()
+    }
+    else if(tokens[parser_cur_index].type == CONST){
+        if(!value_areas[tokens[root->token_index].val]->set_value(tokens[parser_cur_index], {values[tokens[parser_cur_index].val]})){
+            return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
+        }
+    }
     if(root == nullptr){
         root = new AST_Node(parser_cur_index);
         parser_cur_index++;
@@ -495,7 +507,6 @@ err_info insert_word_in_sentence(AST_Node* &root) {
     }
     else root_priority = word_priority[tokens[root->token_index].type];
     if(cur_priority <= root_priority){
-        AST_Node* new_node = new AST_Node(parser_cur_index);
         new_node->children.push_back(root);
         root = new_node;
     }
@@ -505,7 +516,6 @@ err_info insert_word_in_sentence(AST_Node* &root) {
             cur = cur->children[cur->children.size() - 1];
             if(cur == nullptr) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
         }
-        AST_Node* new_node = new AST_Node(parser_cur_index);
         if(cur->children.size() == 2){
             AST_Node* temp = cur->children[1];
             cur->children[1] = new_node;
@@ -514,6 +524,21 @@ err_info insert_word_in_sentence(AST_Node* &root) {
         else cur->children.push_back(new_node);
     }
     parser_cur_index++;
+    return {false, 0, 0, "", ""};
+}
+
+err_info parser_func_count_seg(value &count){
+    int cur = parser_cur_index + 2;
+    if(tokens[cur].lexeme != "(") return {true, tokens[cur].line, tokens[cur].index, "parser", tokens[cur].lexeme};
+    cur++;
+    count.int_val = 0;
+    while(1){
+        if(tokens[cur].type != INT && tokens[cur].type != FLOAT && tokens[cur].type != CHAR && tokens[cur].type != STRING) return {true, tokens[cur].line, tokens[cur].index, "parser", tokens[cur].lexeme}; 
+        if(tokens[cur + 1].type != -2) return {true, tokens[cur + 1].line, tokens[cur + 1].index, "parser", tokens[cur + 1].lexeme};
+        if(tokens[cur + 2].type != COMMA && tokens[cur + 2].type != BACK_BRACKET) return {true, tokens[cur + 2].line, tokens[cur + 2].index, "parser", tokens[cur + 2].lexeme};
+        count.int_val++;
+        if(tokens[cur + 2].type == BACK_BRACKET) break;
+    }
     return {false, 0, 0, "", ""};
 }
 
@@ -536,8 +561,40 @@ err_info parser_sentence(AST_Node* &root){
     }
     while(tokens[parser_cur_index].type != end_type){
         if(tokens[parser_cur_index].type == INT || tokens[parser_cur_index].type == FLOAT || tokens[parser_cur_index].type == CHAR || tokens[parser_cur_index].type == STRING){
-            if(tokens[parser_cur_index + 1].type != -2 && tokens[parser_cur_index + 1].type != FUNC) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
-            if(!value_areas[tokens[root->token_index].val]->insert_value(tokens[parser_cur_index + 1].lexeme, tokens[parser_cur_index].type)){
+            if(tokens[parser_cur_index + 1].type == -2){
+                if(!value_areas[tokens[root->token_index].val]->insert_value(tokens[parser_cur_index + 1].lexeme, tokens[parser_cur_index].type)){
+                    return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
+                }
+            }
+            else if(tokens[parser_cur_index + 1].type == FUNC){
+                if(root != AST_root) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
+                if(!value_areas[tokens[root->token_index].val]->insert_value(tokens[parser_cur_index + 1].lexeme, FUNC)){
+                    return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme}; 
+                }
+                err_info err = parser_func_count_seg(tokens[parser_cur_index + 1].val);
+                if(err.err) return err;
+                AST_Node* cur_ast = new AST_Node(parser_cur_index + 1);
+                parser_cur_index += 2;
+                for(int i = 0; i < tokens[parser_cur_index + 1].val.int_val; i++){
+                    err = parser(cur_ast);
+                    if(err.err) return err;
+                }
+                if(tokens[parser_cur_index].lexeme == "{"){
+                    parser_cur_index++;
+                    while(tokens[parser_cur_index].lexeme != "}"){
+                        err = parser(cur_ast);
+                        if(err.err) return err;
+                    }
+                    parser_cur_index++;
+                }
+                else{
+                    err = parser(cur_ast);
+                    if(err.err) return err;
+                }
+                root->children.push_back(cur_ast);
+                return {false, 0, 0, "", ""};
+            }
+            else{
                 return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
             }
             parser_cur_index++;
@@ -586,7 +643,6 @@ err_info parser_for(AST_Node* &root){
     tokens[parser_cur_index].val = value_areas.size();
     value_areas.push_back(new value_area(values[tokens[root->token_index].val].area_val));
     value_areas[value_areas.size() - 1]->set_upper(value_areas[tokens[root->token_index].val]);
-    value_areas[value_areas.size() - 1]->insert_circle("for", root->children[root->children.size()], root->children[root->children.size() + 1]);
     AST_Node* cur_ast = new AST_Node(parser_cur_index);
     parser_cur_index += 2;
     for(int i = 0; i < 3; i++){
@@ -691,7 +747,6 @@ err_info parser_while(AST_Node* &root){
     tokens[parser_cur_index].val = value_areas.size();
     value_areas.push_back(new value_area(values[tokens[root->token_index].val].area_val));
     value_areas[value_areas.size() - 1]->set_upper(value_areas[tokens[root->token_index].val]);
-    value_areas[value_areas.size() - 1]->insert_circle("while", root->children[root->children.size()], root->children[root->children.size() + 1]);
     AST_Node* cur_ast = new AST_Node(parser_cur_index);
     parser_cur_index += 2;
     err_info err = parser(cur_ast);
@@ -717,12 +772,6 @@ err_info parser_break(AST_Node* &root){
     if(tokens[parser_cur_index + 1].type != SEMICOLON) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     parser_cur_index += 2;
     root->children.push_back(cur_ast);
-    value val;
-    if(!value_areas[tokens[root->token_index].val]->check_value("break", val)){
-        return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
-    }
-    AST_Node* break_root = val.ast_val;
-    root->children.push_back(break_root);
     return {false, 0, 0, "", ""};
 }
 
@@ -731,12 +780,6 @@ err_info parser_continue(AST_Node* &root){
     if(tokens[parser_cur_index + 1].type != SEMICOLON) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     parser_cur_index += 2;
     root->children.push_back(cur_ast);
-    value val;
-    if(!value_areas[tokens[root->token_index].val]->check_value("continue", val)){
-        return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
-    }
-    AST_Node* continue_root = val.ast_val;
-    root->children.push_back(continue_root);
     return {false, 0, 0, "", ""};
 }
 
