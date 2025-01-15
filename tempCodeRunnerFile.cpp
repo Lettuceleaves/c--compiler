@@ -1,2 +1,2 @@
 
-    if(root == nullptr){
+    else{
