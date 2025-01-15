@@ -555,6 +555,7 @@ err_info parser_func_count_seg(int &count){
         if(tokens[cur + 2].type != COMMA && tokens[cur + 2].type != BACK_BRACKET) return {true, tokens[cur + 2].line, tokens[cur + 2].index, "parser", tokens[cur + 2].lexeme};
         count++;
         if(tokens[cur + 2].type == BACK_BRACKET) break;
+        cur += 3;
     }
     return {false, 0, 0, "", ""};
 }
@@ -596,7 +597,10 @@ err_info parser_sentence(AST_Node* &root){
                 if(err.err) return err;
                 AST_Node* cur_ast = new AST_Node(parser_cur_index + 1);
                 tokens[parser_cur_index + 1].val = value_areas.size();
-                value_areas.push_back(new value_area(value_areas[tokens[AST_root->token_index].val]));
+                if(!value_areas[tokens[root->token_index].val]->insert_value(tokens[parser_cur_index + 1].lexeme, FUNC)){
+                    return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
+                }
+                value_areas.push_back(new value_area(value_areas[tokens[root->token_index].val]));
                 if(!value_areas[tokens[parser_cur_index + 1].val]->insert_value(tokens[parser_cur_index + 1].lexeme, FUNC)){
                     return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
                 }
@@ -670,7 +674,7 @@ err_info parser_for(AST_Node* &root){
     if(tokens[parser_cur_index + 1].type != FRONT_BRACKET) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     if(value_areas[tokens[root->token_index].val] == nullptr) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     tokens[parser_cur_index].val = value_areas.size();
-    value_areas.push_back(new value_area(values[tokens[root->token_index].val].area_val));
+    value_areas.push_back(new value_area(value_areas[tokens[root->token_index].val]));
     AST_Node* cur_ast = new AST_Node(parser_cur_index);
     parser_cur_index += 2;
     for(int i = 0; i < 3; i++){
@@ -697,7 +701,7 @@ err_info parser_if(AST_Node* &root){
     if(tokens[parser_cur_index + 1].type != FRONT_BRACKET) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     if(value_areas[tokens[root->token_index].val] == nullptr) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     tokens[parser_cur_index].val = value_areas.size();
-    value_areas.push_back(new value_area(values[tokens[root->token_index].val].area_val));
+    value_areas.push_back(new value_area(value_areas[tokens[root->token_index].val]));
     AST_Node* cur_ast = new AST_Node(parser_cur_index);
     parser_cur_index += 2;
     err_info err = parser(cur_ast);
@@ -722,7 +726,7 @@ err_info parser_else(AST_Node* &root){
     if(tokens[parser_cur_index + 1].type != FRONT_BRACKET) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     if(value_areas[tokens[root->token_index].val] == nullptr) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     tokens[parser_cur_index].val = value_areas.size();
-    value_areas.push_back(new value_area(values[tokens[root->token_index].val].area_val));
+    value_areas.push_back(new value_area(value_areas[tokens[root->token_index].val]));
     AST_Node* cur_ast = new AST_Node(parser_cur_index);
     parser_cur_index += 2;
     if(tokens[parser_cur_index].lexeme == "{"){
@@ -745,7 +749,7 @@ err_info parser_else_if(AST_Node* &root){
     if(tokens[parser_cur_index + 1].type != FRONT_BRACKET) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     if(value_areas[tokens[root->token_index].val] == nullptr) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     tokens[parser_cur_index].val = value_areas.size();
-    value_areas.push_back(new value_area(values[tokens[root->token_index].val].area_val));
+    value_areas.push_back(new value_area(value_areas[tokens[root->token_index].val]));
     AST_Node* cur_ast = new AST_Node(parser_cur_index);
     parser_cur_index += 2;
     err_info err = parser(cur_ast);
@@ -770,7 +774,7 @@ err_info parser_while(AST_Node* &root){
     if(tokens[parser_cur_index + 1].type != FRONT_BRACKET) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     if(value_areas[tokens[root->token_index].val] == nullptr) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
     tokens[parser_cur_index].val = value_areas.size();
-    value_areas.push_back(new value_area(values[tokens[root->token_index].val].area_val));
+    value_areas.push_back(new value_area(value_areas[tokens[root->token_index].val]));
     AST_Node* cur_ast = new AST_Node(parser_cur_index);
     parser_cur_index += 2;
     err_info err = parser(cur_ast);
