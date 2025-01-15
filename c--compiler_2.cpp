@@ -53,26 +53,26 @@ err_info insert_word_in_sentence(AST_Node* &root, AST_Node* &sentence_root);
 string string_helper;
 
 enum token_type {
-    IF, ELSE, ELSE_IF, WHILE, FOR,
+    IF = 0, ELSE = 1, ELSE_IF = 2, WHILE = 3, FOR = 4,
 
-    ASSIGN,                                                 // =
-    LOG_OR,                                                 // ||
-    LOG_AND,                                                // &&
-    OR,                                                     // |
-    XOR,                                                    // ^
-    AND,                                                    // &
-    EQUAL, NOT,                                             // == !=
-    LESS, LESS_EQUAL, GREATER, GREATER_EQUAL,               // < <= > >= 
-    LEFT_MOVE, RIGHT_MOVE,                                  // << >>
-    ADD, SUB,                                               // + -
-    MUL, DIV, MOD,                                          // * / %
-    LOG_NOT, OPPO,                                          // ! ~
-    INT, FLOAT, CHAR, STRING, FRONT_BRACKET, CONST,
+    ASSIGN = 5,                                                 // = 5
+    LOG_OR = 6,                                                 // || 6
+    LOG_AND = 7,                                                // && 7
+    OR = 8,                                                     // | 8
+    XOR = 9,                                                    // ^ 9
+    AND = 10,                                                   // & 10
+    EQUAL = 11, NOT = 12,                                       // == 11 != 12
+    LESS = 13, LESS_EQUAL = 14, GREATER = 15, GREATER_EQUAL = 16, // < 13 <= 14 > 15 >= 16
+    LEFT_MOVE = 17, RIGHT_MOVE = 18,                            // << 17 >> 18
+    ADD = 19, SUB = 20,                                         // + 19 - 20
+    MUL = 21, DIV = 22, MOD = 23,                               // * 21 / 22 % 23
+    LOG_NOT = 24, OPPO = 25,                                    // ! 24 ~ 25
+    INT = 26, FLOAT = 27, CHAR = 28, STRING = 29, FRONT_BRACKET = 30, CONST = 31,
 
-    EOF_, COMMA, SEMICOLON, BACK_BRACKET,                     // EOF , ; )]}
-    RET, DOT, PRINT, START, BREAK, CONTINUE, EXPLAIN,     // return . ([{ printf
-    FUNC
-};
+    EOF_ = 32, COMMA = 33, SEMICOLON = 34, BACK_BRACKET = 35,   // EOF 32 , 33 ; 34 )] 35
+    RET = 36, DOT = 37, PRINT = 38, START = 39, BREAK = 40, CONTINUE = 41, EXPLAIN = 42, // return 36 . 37 printf 38 START 39 break 40 continue 41 // 42
+    FUNC = 43
+};;
 
 struct key_word {
     string word;
@@ -487,7 +487,7 @@ unordered_map<int, int> word_priority = {
     {ADD, 10}, {SUB, 10}, // + -
     {MUL, 11}, {DIV, 11}, {MOD, 11}, // * / %
     {LOG_NOT, 12}, {OPPO, 12}, // ! ~
-    {INT, 13}, {FLOAT, 13}, {CHAR, 13}, {STRING, 13}, {FRONT_BRACKET, 13}, {CONST, 13} // int float char string ( const
+    {INT, 13}, {FLOAT, 13}, {CHAR, 13}, {STRING, 13}, {FRONT_BRACKET, 13}, {CONST, 13}, {FUNC, 13} // int float char string ( const
 };
 
 err_info insert_word_in_sentence(AST_Node* &val_area_root, AST_Node* &sentence_root) {
@@ -503,8 +503,11 @@ err_info insert_word_in_sentence(AST_Node* &val_area_root, AST_Node* &sentence_r
         if(tokens[parser_cur_index].type != FRONT_BRACKET) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
         parser_cur_index++;
         for(int i = 0; i < func_pool[seg_count].first; i++){
-            err_info err = parser(new_node);
+            err_info err = parser(val_area_root);
             if(err.err) return err;
+            AST_Node* target_node = val_area_root->children[val_area_root->children.size() - 1];
+            val_area_root->children.pop_back();
+            new_node->children.push_back(target_node);
         }
         parser_cur_index++;
     }
@@ -648,17 +651,15 @@ err_info parser_sentence(AST_Node* &root){
     parser_cur_index++;
     return {false, 0, 0, "", ""};
 }
-
-err_info parser_func(AST_Node* &root){
-    AST_Node* cur_ast = new AST_Node(parser_cur_index);
-    parser_cur_index++;
-    root->children.push_back(cur_ast);
-    return {false, 0, 0, "", ""};
-}
     
 err_info parser_ret(AST_Node* &root){
     AST_Node* cur_ast = new AST_Node(parser_cur_index);
     parser_cur_index++;
+    err_info err = parser(root);
+    if(err.err) return err;
+    AST_Node* return_target = root->children[root->children.size() - 1];
+    root->children.pop_back();
+    cur_ast->children.push_back(return_target);
     root->children.push_back(cur_ast);
     return {false, 0, 0, "", ""};
 }
@@ -816,10 +817,6 @@ err_info parser(AST_Node* &root) {
         err_info err = parser_start(root);
         if(err.err) return err;
     }
-    else if(tokens[parser_cur_index].type == FUNC){
-        err_info err = parser_func(root);
-        if(err.err) return err;
-    }
     else if(tokens[parser_cur_index].type == RET){
         err_info err = parser_ret(root);
         if(err.err) return err;
@@ -836,7 +833,7 @@ err_info parser(AST_Node* &root) {
         err_info err = parser_continue(root);
         if(err.err) return err;
     }
-    else if((sentence_elements.find(tokens[parser_cur_index].type) != sentence_elements.end() && (tokens[parser_cur_index + 1].type != FUNC)) || tokens[parser_cur_index].type == INT || tokens[parser_cur_index].type == FLOAT || tokens[parser_cur_index].type == CHAR || tokens[parser_cur_index].type == STRING){
+    else if(tokens[parser_cur_index].type == INT || tokens[parser_cur_index].type == FLOAT || tokens[parser_cur_index].type == CHAR || tokens[parser_cur_index].type == STRING || tokens[parser_cur_index].type == FUNC || tokens[parser_cur_index].type == -2){
         err_info err = parser_sentence(root);
         if(err.err) return err;
     }

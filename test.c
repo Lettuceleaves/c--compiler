@@ -1,6 +1,7 @@
 
 int add(int a, int b){
     int c = a + b;
+    return add(c, 3);
 }
 
 int main(int b){
