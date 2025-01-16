@@ -1,6 +1,6 @@
 
 int add(int a, int b){
-    int c = a + b;
+    int c = (1 + 3) * a - b;
     return add(c, 3);
 }
 

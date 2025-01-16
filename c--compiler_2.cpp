@@ -535,10 +535,12 @@ err_info insert_word_in_sentence(AST_Node* &val_area_root, AST_Node* &sentence_r
     }
     if(tokens[parser_cur_index].type == FRONT_BRACKET){
         parser_cur_index++;
+        AST_Node* tmp = nullptr;
         while(tokens[parser_cur_index].type != BACK_BRACKET){
-            err_info err = insert_word_in_sentence(val_area_root, new_node);
+            err_info err = insert_word_in_sentence(val_area_root, tmp);////////////////////////////////////////////////////////////
             if(err.err) return err;
         }
+        new_node->children.push_back(tmp);
     }
     parser_cur_index++;
     return {false, 0, 0, "", ""};
@@ -828,7 +830,7 @@ err_info parser(AST_Node* &root, AST_Node* val_area_root) {
         err_info err = parser_continue(root);
         if(err.err) return err;
     }
-    else if(tokens[parser_cur_index].type == CONST || tokens[parser_cur_index].type == INT || tokens[parser_cur_index].type == FLOAT || tokens[parser_cur_index].type == CHAR || tokens[parser_cur_index].type == STRING || tokens[parser_cur_index].type == FUNC || tokens[parser_cur_index].type == -2){
+    else if(tokens[parser_cur_index].type == CONST || tokens[parser_cur_index].type == INT || tokens[parser_cur_index].type == FLOAT || tokens[parser_cur_index].type == CHAR || tokens[parser_cur_index].type == STRING || tokens[parser_cur_index].type == FUNC || tokens[parser_cur_index].type == -2 || tokens[parser_cur_index].type == FRONT_BRACKET){
         err_info err = parser_sentence(root, val_area_root);
         if(err.err) return err;
     }
