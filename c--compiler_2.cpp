@@ -537,7 +537,7 @@ err_info insert_word_in_sentence(AST_Node* &val_area_root, AST_Node* &sentence_r
         parser_cur_index++;
         AST_Node* tmp = nullptr;
         while(tokens[parser_cur_index].type != BACK_BRACKET){
-            err_info err = insert_word_in_sentence(val_area_root, tmp);////////////////////////////////////////////////////////////
+            err_info err = insert_word_in_sentence(val_area_root, tmp);
             if(err.err) return err;
         }
         new_node->children.push_back(tmp);
