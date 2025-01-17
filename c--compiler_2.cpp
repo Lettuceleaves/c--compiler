@@ -139,6 +139,9 @@ public:
         else if(vars[name].second == STRING){
             string_pool[vars[name].first] = string_pool[val[0].int_val];
         }
+        else if(vars[name].second == INT || vars[name].second == FLOAT || vars[name].second == CHAR){
+            values[vars[name].first] = val[0];
+        }
         return true;
     }
 
@@ -444,9 +447,7 @@ err_info insert_word_in_sentence(AST_Node* &val_area_root, AST_Node* &sentence_r
     int sentence_root_priority;
     AST_Node* new_node = new AST_Node(parser_cur_index);
     if(tokens[parser_cur_index].type == FUNC){
-        if(!value_areas[tokens[val_area_root->token_index].val]->insert_value(tokens[parser_cur_index].lexeme, RET)){
-            return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
-        }
+        !value_areas[tokens[val_area_root->token_index].val]->insert_value(tokens[parser_cur_index].lexeme, RET);
         int func_pool_index;
         int seg_count;
         if(!value_areas[tokens[AST_root->token_index].val]->check_value(tokens[parser_cur_index].lexeme, func_pool_index)){
@@ -675,7 +676,7 @@ AST_Node* main_ast = nullptr;
 err_info parser_sentence(AST_Node* &root, AST_Node* val_area_root){
     AST_Node* sentence_root = nullptr;
     int end_type = SEMICOLON;
-    if(tokens[root->token_index].type == FRONT_BRACKET || tokens[root->token_index].type == WHILE || tokens[root->token_index].type == IF || tokens[root->token_index].type == ELSE_IF){
+    if(tokens[root->token_index].type == FRONT_BRACKET || ((tokens[root->token_index].type == WHILE || tokens[root->token_index].type == IF || tokens[root->token_index].type == ELSE_IF) && root->children.size() == 0)){
         end_type = BACK_BRACKET;
     }
     else if(tokens[root->token_index].type == FOR && root->children.size() == 2){
@@ -849,32 +850,35 @@ bool continue_flag = false;
 bool if_flag = false;
 value return_val;
 
-value get_val(AST_Node* node){
-    value val;
+value get_val(AST_Node* scope, AST_Node* node){
     if(tokens[node->token_index].type == CONST){
-        val = values[tokens[node->token_index].val];
+        return values[tokens[node->token_index].val];
     }
-    else if(tokens[node->token_index].type == -2){
-        if(!value_areas[tokens[AST_root->token_index].val]->get_value(tokens[node->token_index].lexeme, val)){
+    else if(tokens[node->token_index].type == INT || tokens[node->token_index].type == FLOAT || tokens[node->token_index].type == CHAR || tokens[node->token_index].type == STRING || tokens[node->token_index].type == FUNC){
+        value val;
+        if(!value_areas[tokens[scope->token_index].val]->get_value(tokens[node->token_index].lexeme, val)){
             return {0};
         }
+        return val;
     }
     else if(sign_map.find(tokens[node->token_index].type) != sign_map.end()){
         return sign_map[tokens[node->token_index].type];
     }
-    return val;
+    return value(0);
 }
 
-void cal_set_val(AST_Node* node, value val){
-    if(tokens[node->token_index].type == -2){
-        value_areas[tokens[node->token_index].val]->set_value(tokens[node->token_index].lexeme, {val});
+void cal_set_val(AST_Node* scope, AST_Node* node, value val){
+    if(tokens[node->token_index].type == INT || tokens[node->token_index].type == FLOAT || tokens[node->token_index].type == CHAR || tokens[node->token_index].type == STRING){
+        value_areas[tokens[scope->token_index].val]->set_value(tokens[node->token_index].lexeme, {val});
     }
     else if(sign_map.find(tokens[node->token_index].type) != sign_map.end()){
         sign_map[tokens[node->token_index].type] = val;
     }
 }
 
-void calculate(AST_Node* node, value left_val, value right_val){
+int debugger_counter = 0;
+
+void calculate(AST_Node* scope, AST_Node* node, value left_val, value right_val){
     if(tokens[node->token_index].type == ADD){
         sign_map[ADD] = left_val.int_val + right_val.int_val;
     }
@@ -901,7 +905,10 @@ void calculate(AST_Node* node, value left_val, value right_val){
     }
     else if(tokens[node->token_index].type == ASSIGN){
         sign_map[ASSIGN] = right_val;
-        cal_set_val(node->children[0], right_val);
+        cal_set_val(scope, node->children[0], right_val);
+    }
+    else if(tokens[node->token_index].type == LESS){
+        sign_map[LESS] = left_val.int_val < right_val.int_val ? 1 : 0;
     }
 }
 
@@ -962,12 +969,13 @@ err_info dfs_ast(AST_Node* scope, AST_Node* node, int depth) {
             }
         }
         else if(tokens[node->token_index].type == FOR){
-            if(node->children.size() != 3) return {true, tokens[node->token_index].line, tokens[node->token_index].index, "dfs_ast", tokens[node->token_index].lexeme};
             err_info err = dfs_ast(scope, node->children[0], depth + 1);
             if(err.err) return err;
-            while(values[tokens[node->children[1]->token_index].val].int_val){
+            err = dfs_ast(scope, node->children[1], depth + 1);
+            if(err.err) return err;
+            while(get_val(scope, node->children[1]).int_val){
                 bool continue_flag_helper = false;
-                for(int i = 1; i < node->children.size(); i++){
+                for(int i = 3; i < node->children.size(); i++){
                     err = dfs_ast(node, node->children[i], depth + 1);
                     if(err.err) return err;
                     if(break_flag){
@@ -983,7 +991,9 @@ err_info dfs_ast(AST_Node* scope, AST_Node* node, int depth) {
                         return {false, 0, 0, "", ""};
                     }
                 }
-                err = dfs_ast(scope, node->children[0], depth + 1);
+                err = dfs_ast(scope, node->children[1], depth + 1);
+                if(err.err) return err;
+                err = dfs_ast(scope, node->children[2], depth + 1);
                 if(err.err) return err;
                 if(continue_flag_helper){
                     continue_flag_helper = false;
@@ -1016,16 +1026,20 @@ err_info dfs_ast(AST_Node* scope, AST_Node* node, int depth) {
                 if(tokens[node->token_index].lexeme == "print"){
                     err_info err = dfs_ast(scope, node->children[0], depth + 1);
                     if(err.err) return err;
-                    value val = get_val(node->children[0]);
+                    value val = get_val(scope, node->children[0]);
                     cout << val.int_val << endl;
+                    debugger_counter++;
+                    if(debugger_counter >= 200){
+                        while(1){}
+                    }
                     return {false, 0, 0, "", ""};
                 }
                 AST_Node* func_node = func_pool[func_pool_index].second;
                 for (int i = 0; i < seg_count; i++) {
                     err_info err = dfs_ast(scope, node->children[i], depth + 1);
                     if (err.err) return err;
-                    value val = get_val(node->children[i]);
-                    if(value_areas[tokens[func_node->token_index].val]->set_value(tokens[func_node->children[i]->token_index].lexeme, {val})){
+                    value val = get_val(scope, node->children[i]);
+                    if(!value_areas[tokens[func_node->token_index].val]->set_value(tokens[func_node->children[i]->token_index].lexeme, {val})){
                         return {true, tokens[node->children[i]->token_index].line, tokens[node->children[i]->token_index].index, "dfs_ast", tokens[node->children[i]->token_index].lexeme};
                     }
                 }
@@ -1040,7 +1054,7 @@ err_info dfs_ast(AST_Node* scope, AST_Node* node, int depth) {
             if(node->children.size() != 1) return {true, tokens[node->token_index].line, tokens[node->token_index].index, "dfs_ast", tokens[node->token_index].lexeme};
             err_info err = dfs_ast(scope, node->children[0], depth + 1);
             if(err.err) return err;
-            value ret_val = get_val(node->children[0]);
+            value ret_val = get_val(scope, node->children[0]);
             value_areas[tokens[scope->token_index].val]->ret_push(ret_val);
             ret_flag = true;
             return {false, 0, 0, "", ""};
@@ -1058,9 +1072,9 @@ err_info dfs_ast(AST_Node* scope, AST_Node* node, int depth) {
         for (auto child : node->children) {
             err_info err = dfs_ast(scope, child, depth + 1);
             if (err.err) return err;
-            if(sign_map.find(tokens[node->token_index].type) != sign_map.end()){
-                calculate(node, get_val(node->children[0]), get_val(node->children[1]));
-            }
+        }
+        if(sign_map.find(tokens[node->token_index].type) != sign_map.end()){
+            calculate(scope, node, get_val(scope, node->children[0]), get_val(scope, node->children[1]));
         }
     }
     return {false, 0, 0, "", ""};
