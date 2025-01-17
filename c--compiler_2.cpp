@@ -867,7 +867,14 @@ value get_val(AST_Node* scope, AST_Node* node){
     return value(0);
 }
 
-void cal_set_val(AST_Node* scope, AST_Node* node, value val){
+void cal_set_val(AST_Node* scope, AST_Node* node, value val, int right_type){
+    int left_type = tokens[node->token_index].val_type;
+    if(left_type == INT && right_type == FLOAT) val.int_val = (int)val.float_val;
+    else if(left_type == FLOAT && right_type == INT) val.float_val = (float)val.int_val;
+    else if(left_type == CHAR && right_type == INT) val.char_val = (char)val.int_val;
+    else if(left_type == INT && right_type == CHAR) val.int_val = (int)val.char_val;
+    else if(left_type == FLOAT && right_type == CHAR) val.float_val = (float)val.char_val;
+    else if(left_type == CHAR && right_type == FLOAT) val.char_val = (char)val.float_val;
     if(tokens[node->token_index].type == INT || tokens[node->token_index].type == FLOAT || tokens[node->token_index].type == CHAR || tokens[node->token_index].type == STRING){
         value_areas[tokens[scope->token_index].val]->set_value(tokens[node->token_index].lexeme, {val});
     }
@@ -876,39 +883,333 @@ void cal_set_val(AST_Node* scope, AST_Node* node, value val){
     }
 }
 
-int debugger_counter = 0;
-
-void calculate(AST_Node* scope, AST_Node* node, value left_val, value right_val){
+err_info calculate(AST_Node* scope, AST_Node* node, value left_val, value right_val, int left_type, int right_type){
     if(tokens[node->token_index].type == ADD){
-        sign_map[ADD] = left_val.int_val + right_val.int_val;
+        if(left_type == INT || right_type == INT){
+            if(left_type == FLOAT) left_val.int_val = left_val.float_val;
+            if(right_type == FLOAT) right_val.int_val = right_val.float_val;
+            if(left_type == CHAR) left_val.int_val = left_val.char_val;
+            if(right_type == CHAR) right_val.int_val = right_val.char_val;
+            sign_map[ADD] = left_val.int_val + right_val.int_val;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[ADD] = left_val.float_val + right_val.float_val;
+            tokens[node->token_index].val_type = FLOAT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[ADD] = left_val.char_val + right_val.char_val;
+            tokens[node->token_index].val_type = CHAR;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
     }
     else if(tokens[node->token_index].type == SUB){
-        sign_map[SUB] = left_val.int_val - right_val.int_val;
+        if(left_type == INT || right_type == INT){
+            if(left_type == FLOAT) left_val.int_val = left_val.float_val;
+            if(right_type == FLOAT) right_val.int_val = right_val.float_val;
+            if(left_type == CHAR) left_val.int_val = left_val.char_val;
+            if(right_type == CHAR) right_val.int_val = right_val.char_val;
+            sign_map[SUB] = left_val.int_val - right_val.int_val;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[SUB] = left_val.float_val - right_val.float_val;
+            tokens[node->token_index].val_type = FLOAT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[SUB] = left_val.char_val - right_val.char_val;
+            tokens[node->token_index].val_type = CHAR;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
     }
     else if(tokens[node->token_index].type == MUL){
-        sign_map[MUL] = left_val.int_val * right_val.int_val;
+        if(left_type == INT || right_type == INT){
+            if(left_type == FLOAT) left_val.int_val = left_val.float_val;
+            if(right_type == FLOAT) right_val.int_val = right_val.float_val;
+            if(left_type == CHAR) left_val.int_val = left_val.char_val;
+            if(right_type == CHAR) right_val.int_val = right_val.char_val;
+            sign_map[MUL] = left_val.int_val * right_val.int_val;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[MUL] = left_val.float_val * right_val.float_val;
+            tokens[node->token_index].val_type = FLOAT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[MUL] = left_val.char_val * right_val.char_val;
+            tokens[node->token_index].val_type = CHAR;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
     }
     else if(tokens[node->token_index].type == DIV){
-        sign_map[DIV] = left_val.int_val / right_val.int_val;
+        if(left_type == INT || right_type == INT){
+            if(left_type == FLOAT) left_val.int_val = left_val.float_val;
+            if(right_type == FLOAT) right_val.int_val = right_val.float_val;
+            if(left_type == CHAR) left_val.int_val = left_val.char_val;
+            if(right_type == CHAR) right_val.int_val = right_val.char_val;
+            sign_map[DIV] = left_val.int_val / right_val.int_val;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[DIV] = left_val.float_val / right_val.float_val;
+            tokens[node->token_index].val_type = FLOAT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[DIV] = left_val.char_val / right_val.char_val;
+            tokens[node->token_index].val_type = CHAR;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
     }
     else if(tokens[node->token_index].type == MOD){
-        sign_map[MOD] = left_val.int_val % right_val.int_val;
+        if(left_type == INT || right_type == INT){
+            if(left_type == FLOAT) left_val.int_val = left_val.float_val;
+            if(right_type == FLOAT) right_val.int_val = right_val.float_val;
+            if(left_type == CHAR) left_val.int_val = left_val.char_val;
+            if(right_type == CHAR) right_val.int_val = right_val.char_val;
+            sign_map[MOD] = left_val.int_val % right_val.int_val;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[MOD] = (int)left_val.float_val % (int)right_val.float_val;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[MOD] = left_val.char_val % right_val.char_val;
+            tokens[node->token_index].val_type = CHAR;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
     }
     else if(tokens[node->token_index].type == AND){
-        sign_map[AND] = left_val.int_val && right_val.int_val;
+        if(left_type == INT || right_type == INT){
+            sign_map[AND] = left_val.int_val && right_val.int_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[AND] = left_val.char_val && right_val.char_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[AND] = left_val.float_val && right_val.float_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
     }
     else if(tokens[node->token_index].type == OR){
-        sign_map[OR] = left_val.int_val || right_val.int_val;
+        if(left_type == INT || right_type == INT){
+            sign_map[OR] = left_val.int_val || right_val.int_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[OR] = left_val.char_val || right_val.char_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[OR] = left_val.float_val || right_val.float_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
     }
     else if(tokens[node->token_index].type == NOT){
-        sign_map[NOT] = !right_val.int_val;
+        if(left_type == INT){
+            sign_map[NOT] = !left_val.int_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == CHAR){
+            sign_map[NOT] = !left_val.char_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT){
+            sign_map[NOT] = !left_val.float_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+    }
+    else if(tokens[node->token_index].type == LESS){
+        if(left_type == INT || right_type == INT){
+            if(left_type == FLOAT) left_val.int_val = left_val.float_val;
+            if(right_type == FLOAT) right_val.int_val = right_val.float_val;
+            if(left_type == CHAR) left_val.int_val = left_val.char_val;
+            if(right_type == CHAR) right_val.int_val = right_val.char_val;
+            sign_map[LESS] = left_val.int_val < right_val.int_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[LESS] = left_val.float_val < right_val.float_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[LESS] = left_val.char_val < right_val.char_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+    }
+    else if(tokens[node->token_index].type == GREATER){
+        if(left_type == INT || right_type == INT){
+            if(left_type == FLOAT) left_val.int_val = left_val.float_val;
+            if(right_type == FLOAT) right_val.int_val = right_val.float_val;
+            if(left_type == CHAR) left_val.int_val = left_val.char_val;
+            if(right_type == CHAR) right_val.int_val = right_val.char_val;
+            sign_map[GREATER] = left_val.int_val > right_val.int_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[GREATER] = left_val.float_val > right_val.float_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[GREATER] = left_val.char_val > right_val.char_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+    }
+    else if(tokens[node->token_index].type == LESS_EQUAL){
+        if(left_type == INT || right_type == INT){
+            if(left_type == FLOAT) left_val.int_val = left_val.float_val;
+            if(right_type == FLOAT) right_val.int_val = right_val.float_val;
+            if(left_type == CHAR) left_val.int_val = left_val.char_val;
+            if(right_type == CHAR) right_val.int_val = right_val.char_val;
+            sign_map[LESS_EQUAL] = left_val.int_val <= right_val.int_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[LESS_EQUAL] = left_val.float_val <= right_val.float_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[LESS_EQUAL] = left_val.char_val <= right_val.char_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+    }
+    else if(tokens[node->token_index].type == GREATER_EQUAL){
+        if(left_type == INT || right_type == INT){
+            if(left_type == FLOAT) left_val.int_val = left_val.float_val;
+            if(right_type == FLOAT) right_val.int_val = right_val.float_val;
+            if(left_type == CHAR) left_val.int_val = left_val.char_val;
+            if(right_type == CHAR) right_val.int_val = right_val.char_val;
+            sign_map[GREATER_EQUAL] = left_val.int_val >= right_val.int_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[GREATER_EQUAL] = left_val.float_val >= right_val.float_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[GREATER_EQUAL] = left_val.char_val >= right_val.char_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+    }
+    else if(tokens[node->token_index].type == EQUAL){
+        if(left_type == INT || right_type == INT){
+            if(left_type == FLOAT) left_val.int_val = left_val.float_val;
+            if(right_type == FLOAT) right_val.int_val = right_val.float_val;
+            if(left_type == CHAR) left_val.int_val = left_val.char_val;
+            if(right_type == CHAR) right_val.int_val = right_val.char_val;
+            sign_map[EQUAL] = left_val.int_val == right_val.int_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[EQUAL] = left_val.float_val == right_val.float_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[EQUAL] = left_val.char_val == right_val.char_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+    }
+    else if(tokens[node->token_index].type == NOT){
+        if(left_type == INT || right_type == INT){
+            if(left_type == FLOAT) left_val.int_val = left_val.float_val;
+            if(right_type == FLOAT) right_val.int_val = right_val.float_val;
+            if(left_type == CHAR) left_val.int_val = left_val.char_val;
+            if(right_type == CHAR) right_val.int_val = right_val.char_val;
+            sign_map[NOT] = left_val.int_val != right_val.int_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == FLOAT && right_type == FLOAT){
+            sign_map[NOT] = left_val.float_val != right_val.float_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == CHAR && right_type == CHAR){
+            sign_map[NOT] = left_val.char_val != right_val.char_val ? 1 : 0;
+            tokens[node->token_index].val_type = INT;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+    }
+    else if(tokens[node->token_index].type == LEFT_MOVE){
+        if(left_type == INT || right_type == INT){
+            sign_map[LEFT_MOVE] = left_val.int_val << right_val.int_val;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == CHAR || right_type == CHAR){
+            sign_map[LEFT_MOVE] = left_val.char_val << right_val.char_val;
+            tokens[node->token_index].val_type = CHAR;
+        }
+        else if(left_type == FLOAT || right_type == FLOAT){
+            sign_map[LEFT_MOVE] = (int)left_val.float_val << (int)right_val.float_val;
+            tokens[node->token_index].val_type = INT;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+    }
+    else if(tokens[node->token_index].type == RIGHT_MOVE){
+        if(left_type == INT || right_type == INT){
+            sign_map[RIGHT_MOVE] = left_val.int_val >> right_val.int_val;
+            tokens[node->token_index].val_type = INT;
+        }
+        else if(left_type == CHAR || right_type == CHAR){
+            sign_map[RIGHT_MOVE] = left_val.char_val >> right_val.char_val;
+            tokens[node->token_index].val_type = CHAR;
+        }
+        else if(left_type == FLOAT || right_type == FLOAT){
+            sign_map[RIGHT_MOVE] = (int)left_val.float_val >> (int)right_val.float_val;
+            tokens[node->token_index].val_type = INT;
+        }
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+    }
+    else if(tokens[node->token_index].type == LOG_NOT){
+        sign_map[LOG_NOT] = !left_val.int_val ? 1 : 0;
+        tokens[node->token_index].val_type = INT;
+    }
+    else if(tokens[node->token_index].type == LOG_AND){
+        int left;
+        int right;
+        if(left_type == INT) left = left_val.int_val;
+        else if(left_type == FLOAT) left = left_val.float_val;
+        else if(left_type == CHAR) left = left_val.char_val;
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+        if(right_type == INT) right = right_val.int_val;
+        else if(right_type == FLOAT) right = right_val.float_val;
+        else if(right_type == CHAR) right = right_val.char_val;
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+        sign_map[LOG_AND] = left && right ? 1 : 0;
+        tokens[node->token_index].val_type = INT;
+    }
+    else if(tokens[node->token_index].type == LOG_OR){
+        int left;
+        int right;
+        if(left_type == INT) left = left_val.int_val;
+        else if(left_type == FLOAT) left = left_val.float_val;
+        else if(left_type == CHAR) left = left_val.char_val;
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+        if(right_type == INT) right = right_val.int_val;
+        else if(right_type == FLOAT) right = right_val.float_val;
+        else if(right_type == CHAR) right = right_val.char_val;
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+        sign_map[LOG_OR] = left || right ? 1 : 0;
+        tokens[node->token_index].val_type = INT;
+    }
+    else if(tokens[node->token_index].type == OPPO){
+        if(left_type == INT) sign_map[OPPO] = ~left_val.int_val;
+        else if(left_type == CHAR) sign_map[OPPO] = ~left_val.char_val;
+        else return {true, tokens[node->token_index].line, tokens[node->token_index].index, "parser", tokens[node->token_index].lexeme};
+        tokens[node->token_index].val_type = left_type;
     }
     else if(tokens[node->token_index].type == ASSIGN){
         sign_map[ASSIGN] = right_val;
-        cal_set_val(scope, node->children[0], right_val);
-    }
-    else if(tokens[node->token_index].type == LESS){
-        sign_map[LESS] = left_val.int_val < right_val.int_val ? 1 : 0;
+        cal_set_val(scope, node->children[0], right_val, right_type);
+        tokens[node->token_index].val_type = left_type;
     }
 }
 
@@ -918,7 +1219,7 @@ err_info dfs_ast(AST_Node* scope, AST_Node* node, int depth) {
         if(tokens[node->token_index].type == IF){
             err_info err = dfs_ast(scope, node->children[0], depth + 1);
             if(err.err) return err;
-            if(values[tokens[node->children[0]->token_index].val].int_val){
+            if(get_val(scope, node->children[0]).int_val){
                 err = dfs_ast(node, node->children[1], depth + 1);
                 if(err.err) return err;
                 if_flag = true;
@@ -940,7 +1241,7 @@ err_info dfs_ast(AST_Node* scope, AST_Node* node, int depth) {
             else{
                 err_info err = dfs_ast(scope, node->children[0], depth + 1);
                 if(err.err) return err;
-                if(values[tokens[node->children[0]->token_index].val].int_val){
+                if(get_val(scope, node->children[0]).int_val){
                     err = dfs_ast(node, node->children[1], depth + 1);
                     if(err.err) return err;
                     if_flag = true;
@@ -950,7 +1251,7 @@ err_info dfs_ast(AST_Node* scope, AST_Node* node, int depth) {
         else if(tokens[node->token_index].type == WHILE){
             err_info err = dfs_ast(node, node->children[0], depth + 1);
             if(err.err) return err;
-            while(values[tokens[node->children[0]->token_index].val].int_val){
+            while(get_val(scope, node->children[0]).int_val){
                 err = dfs_ast(node, node->children[1], depth + 1);
                 if(err.err) return err;
                 if(ret_flag){
@@ -1027,11 +1328,11 @@ err_info dfs_ast(AST_Node* scope, AST_Node* node, int depth) {
                     err_info err = dfs_ast(scope, node->children[0], depth + 1);
                     if(err.err) return err;
                     value val = get_val(scope, node->children[0]);
-                    cout << val.int_val << endl;
-                    debugger_counter++;
-                    if(debugger_counter >= 200){
-                        while(1){}
-                    }
+                    int type = tokens[node->children[0]->token_index].val_type;
+                    if(type == INT) cout << val.int_val << endl;
+                    else if(type == FLOAT) cout << val.float_val << endl;
+                    else if(type == CHAR) cout << val.char_val;
+                    else cout << "null" << endl;
                     return {false, 0, 0, "", ""};
                 }
                 AST_Node* func_node = func_pool[func_pool_index].second;
@@ -1074,7 +1375,10 @@ err_info dfs_ast(AST_Node* scope, AST_Node* node, int depth) {
             if (err.err) return err;
         }
         if(sign_map.find(tokens[node->token_index].type) != sign_map.end()){
-            calculate(scope, node, get_val(scope, node->children[0]), get_val(scope, node->children[1]));
+            int left = tokens[node->children[0]->token_index].val_type;
+            int right = tokens[node->children[1]->token_index].val_type;
+            err_info err = calculate(scope, node, get_val(scope, node->children[0]), get_val(scope, node->children[1]), left, right);
+            if(err.err) return err;
         }
     }
     return {false, 0, 0, "", ""};
@@ -1187,7 +1491,7 @@ int main(int argc, char* argv[]) {
         cout << "Error at line " << err.line << ", index " << err.index << ", " << err.part << ": " << err.word << endl;
         return 1;
     }
-    else cout << "dfs_ast runs successfully" << endl << endl;
+    else cout << endl << endl << "dfs_ast runs successfully" << endl << endl;
 
     // safe exit
 
