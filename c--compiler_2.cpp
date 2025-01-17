@@ -57,6 +57,8 @@ struct AST_Node {
     AST_Node(int ti) : token_index(ti) {};
 };
 
+value_area* globle_area;
+
 class value_area {
 private:
     vector<value> values;
@@ -86,6 +88,10 @@ public:
             vars[name].first = func_pool.size() - 1;
             return true;
         }
+        else if(type == RET) {
+            val = value(0);
+            return true;
+        }
         else return false;
         values.push_back(val);
         return true;
@@ -109,6 +115,15 @@ public:
         return true;
     }
 
+    bool get_value(string name, value &val){
+        if(vars.find(name) == vars.end()){
+            if (upper) return upper->get_value(name, val);
+            return false;
+        }
+        val = values[vars[name].first];
+        return true;
+    }
+
     bool set_value(string name, vector<value> val){
         if(vars.find(name) == vars.end()){
             if (upper) return upper->set_value(name, val);
@@ -125,6 +140,21 @@ public:
             string_pool[vars[name].first] = string_pool[val[0].int_val];
         }
         return true;
+    }
+
+    void ret_push(value val){
+        if(upper && upper != globle_area){
+            upper->ret_push(val);
+        }
+        else{
+            values.push_back(val);
+        }
+    }
+
+    value ret_pop(){
+        value val = this->values[this->values.size() - 1];
+        this->values.pop_back();
+        return val;
     }
 };
 
@@ -391,7 +421,9 @@ err_info parser_init(){
 
 err_info parser_start(AST_Node* &root){
     tokens[root->token_index].val = value_areas.size();
-    value_areas.push_back(new value_area());
+    value_area *val_area = new value_area();
+    value_areas.push_back(val_area);
+    globle_area = val_area;
     err_info err = parser_init();
     if(err.err) return err;
     parser_cur_index++;
@@ -407,14 +439,19 @@ err_info insert_word_in_sentence(AST_Node* &val_area_root, AST_Node* &sentence_r
     int sentence_root_priority;
     AST_Node* new_node = new AST_Node(parser_cur_index);
     if(tokens[parser_cur_index].type == FUNC){
-        int seg_count;
-        if(!value_areas[tokens[AST_root->token_index].val]->check_value(tokens[parser_cur_index].lexeme, seg_count)){
+        if(!value_areas[tokens[val_area_root->token_index].val]->insert_value(tokens[parser_cur_index].lexeme, RET)){
             return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
         }
+        int func_pool_index;
+        int seg_count;
+        if(!value_areas[tokens[AST_root->token_index].val]->check_value(tokens[parser_cur_index].lexeme, func_pool_index)){
+            return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
+        }
+        seg_count = func_pool[func_pool_index].first;
         parser_cur_index++;
         if(tokens[parser_cur_index].type != FRONT_BRACKET) return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
         parser_cur_index++;
-        for(int i = 0; i < func_pool[seg_count].first; i++){
+        for(int i = 0; i < seg_count; i++){
             err_info err = parser(new_node, val_area_root);
             if(err.err) return err;
         }
@@ -616,6 +653,7 @@ err_info parser_func_count_seg(int &count){
     if(tokens[cur].lexeme != "(") return {true, tokens[cur].line, tokens[cur].index, "parser", tokens[cur].lexeme};
     cur++;
     count = 0;
+    if(tokens[cur].type == BACK_BRACKET) return {false, 0, 0, "", ""};
     while(1){
         if(tokens[cur].type != INT && tokens[cur].type != FLOAT && tokens[cur].type != CHAR && tokens[cur].type != STRING) return {true, tokens[cur].line, tokens[cur].index, "parser", tokens[cur].lexeme}; 
         if(tokens[cur + 1].type != -2) return {true, tokens[cur + 1].line, tokens[cur + 1].index, "parser", tokens[cur + 1].lexeme};
@@ -626,6 +664,8 @@ err_info parser_func_count_seg(int &count){
     }
     return {false, 0, 0, "", ""};
 }
+
+AST_Node* main_ast = nullptr;
 
 err_info parser_sentence(AST_Node* &root, AST_Node* val_area_root){
     AST_Node* sentence_root = nullptr;
@@ -663,6 +703,7 @@ err_info parser_sentence(AST_Node* &root, AST_Node* val_area_root){
                 err_info err = parser_func_count_seg(count.int_val);
                 if(err.err) return err;
                 AST_Node* cur_ast = new AST_Node(parser_cur_index + 1);
+                if(tokens[parser_cur_index + 1].lexeme == "main") main_ast = cur_ast;
                 tokens[parser_cur_index + 1].val = value_areas.size();
                 if(!value_areas[tokens[val_area_root->token_index].val]->insert_value(tokens[parser_cur_index + 1].lexeme, FUNC)){
                     return {true, tokens[parser_cur_index].line, tokens[parser_cur_index].index, "parser", tokens[parser_cur_index].lexeme};
@@ -764,6 +805,8 @@ err_info parser(AST_Node* &root, AST_Node* val_area_root) {
     return {false, 0, 0, "", ""};
 }
 
+
+/*
 err_info dfs_ast(){
     stack<AST_Node*> node_stack;
     node_stack.push(AST_root);
@@ -789,6 +832,195 @@ err_info dfs_ast(){
         }
     }
 
+    return {false, 0, 0, "", ""};
+}
+*/
+
+set<int> special_nodes = {IF, ELSE, ELSE_IF, WHILE, FOR, FUNC, RET, BREAK, CONTINUE, PRINT};
+
+bool ret_flag = false;
+bool break_flag = false;
+bool continue_flag = false;
+bool if_flag = false;
+value return_val;
+
+value get_val(AST_Node* node){
+    value val;
+    if(tokens[node->token_index].type == CONST){
+        val = values[tokens[node->token_index].val];
+    }
+    else if(tokens[node->token_index].type == -2){
+        if(!value_areas[tokens[AST_root->token_index].val]->get_value(tokens[node->token_index].lexeme, val)){
+            return {0};
+        }
+    }
+    return val;
+}
+
+err_info dfs_ast(AST_Node* scope, AST_Node* node, int depth) {
+    if (!node) return {false, 0, 0, "", ""};
+    if(special_nodes.find(tokens[node->token_index].type) != special_nodes.end()){
+        if(tokens[node->token_index].type == IF){
+            err_info err = dfs_ast(scope, node->children[0], depth + 1);
+            if(err.err) return err;
+            if(values[tokens[node->children[0]->token_index].val].int_val){
+                err = dfs_ast(node, node->children[1], depth + 1);
+                if(err.err) return err;
+                if_flag = true;
+            }
+        }
+        else if(tokens[node->token_index].type == ELSE){
+            if(if_flag){
+                return {false, 0, 0, "", ""};
+            }
+            else{
+                err_info err = dfs_ast(node, node->children[0], depth + 1);
+                if(err.err) return err;
+            }
+        }
+        else if(tokens[node->token_index].type == ELSE_IF){
+            if(if_flag){
+                return {false, 0, 0, "", ""};
+            }
+            else{
+                err_info err = dfs_ast(scope, node->children[0], depth + 1);
+                if(err.err) return err;
+                if(values[tokens[node->children[0]->token_index].val].int_val){
+                    err = dfs_ast(node, node->children[1], depth + 1);
+                    if(err.err) return err;
+                    if_flag = true;
+                }
+            }
+        }
+        else if(tokens[node->token_index].type == WHILE){
+            err_info err = dfs_ast(node, node->children[0], depth + 1);
+            if(err.err) return err;
+            while(values[tokens[node->children[0]->token_index].val].int_val){
+                err = dfs_ast(node, node->children[1], depth + 1);
+                if(err.err) return err;
+                if(ret_flag){
+                    ret_flag = false;
+                    break;
+                }
+                if(break_flag){
+                    break_flag = false;
+                    break;
+                }
+                if(continue_flag){
+                    continue_flag = false;
+                }
+                err = dfs_ast(scope, node->children[0], depth + 1);
+                if(err.err) return err;
+            }
+        }
+        else if(tokens[node->token_index].type == FOR){
+            if(node->children.size() != 3) return {true, tokens[node->token_index].line, tokens[node->token_index].index, "dfs_ast", tokens[node->token_index].lexeme};
+            err_info err = dfs_ast(scope, node->children[0], depth + 1);
+            if(err.err) return err;
+            while(values[tokens[node->children[1]->token_index].val].int_val){
+                bool continue_flag_helper = false;
+                for(int i = 1; i < node->children.size(); i++){
+                    err = dfs_ast(node, node->children[i], depth + 1);
+                    if(err.err) return err;
+                    if(break_flag){
+                        break_flag = false;
+                        break;
+                    }
+                    if(continue_flag){
+                        continue_flag = false;
+                        continue_flag_helper = true;
+                        break;
+                    }
+                    if(ret_flag){
+                        return {false, 0, 0, "", ""};
+                    }
+                }
+                err = dfs_ast(scope, node->children[0], depth + 1);
+                if(err.err) return err;
+                if(continue_flag_helper){
+                    continue_flag_helper = false;
+                    continue;
+                }
+            }
+        }
+        else if(tokens[node->token_index].type == FUNC){
+            if(node->children.size() != 1) return {true, tokens[node->token_index].line, tokens[node->token_index].index, "dfs_ast", tokens[node->token_index].lexeme};
+            int func_pool_index;
+            int seg_count;
+            if(!value_areas[tokens[AST_root->token_index].val]->check_value(tokens[node->token_index].lexeme, func_pool_index)){
+                return {true, tokens[node->token_index].line, tokens[node->token_index].index, "dfs_ast", tokens[node->token_index].lexeme};
+            }
+            seg_count = func_pool[func_pool_index].first;
+            if(seg_count > node->children.size()){
+                for(int i = seg_count; i < node->children.size(); i++){
+                    err_info err = dfs_ast(node, node->children[i], depth + 1);
+                    if(err.err) return err;
+                    if(ret_flag){
+                        ret_flag = false;
+                        value ret_val = value_areas[tokens[node->token_index].val]->ret_pop();
+                        if(!value_areas[tokens[scope->token_index].val]->set_value(tokens[node->token_index].lexeme, {ret_val})){
+                            return {true, tokens[node->token_index].line, tokens[node->token_index].index, "dfs_ast", tokens[node->token_index].lexeme};
+                        }
+                        return {false, 0, 0, "", ""};
+                    }
+                }
+            }
+            else if(seg_count == node->children.size()){
+                AST_Node* func_node = func_pool[func_pool_index].second;
+                for (int i = 0; i < seg_count; i++) {
+                    err_info err = dfs_ast(scope, node->children[i], depth + 1);
+                    if (err.err) return err;
+                    value val = get_val(node->children[i]);
+                    if(value_areas[tokens[func_node->token_index].val]->set_value(tokens[func_node->children[i]->token_index].lexeme, {val})){
+                        return {true, tokens[node->children[i]->token_index].line, tokens[node->children[i]->token_index].index, "dfs_ast", tokens[node->children[i]->token_index].lexeme};
+                    }
+                }
+                err_info err = dfs_ast(scope, func_node, depth + 1);
+                if(err.err) return err;
+            }
+            else{
+                return {true, tokens[node->token_index].line, tokens[node->token_index].index, "dfs_ast", tokens[node->token_index].lexeme};
+            }
+        }
+        else if(tokens[node->token_index].type == RET){
+            if(node->children.size() != 1) return {true, tokens[node->token_index].line, tokens[node->token_index].index, "dfs_ast", tokens[node->token_index].lexeme};
+            err_info err = dfs_ast(scope, node->children[0], depth + 1);
+            if(err.err) return err;
+            value ret_val = get_val(node->children[0]);
+            value_areas[tokens[scope->token_index].val]->ret_push(ret_val);
+            ret_flag = true;
+            return {false, 0, 0, "", ""};
+        }
+        else if(tokens[node->token_index].type == BREAK){
+            break_flag = true;
+            return {false, 0, 0, "", ""};
+        }
+        else if(tokens[node->token_index].type == CONTINUE){
+            continue_flag = true;
+            return {false, 0, 0, "", ""};
+        }
+        else if(tokens[node->token_index].type == PRINT){
+            value val = get_val(node->children[0]);
+            if(val.int_val){
+                cout << val.int_val << endl;
+            }
+            else if(val.float_val){
+                cout << val.float_val << endl;
+            }
+            else if(val.char_val){
+                cout << val.char_val << endl;
+            }
+            else{
+                return {true, tokens[node->token_index].line, tokens[node->token_index].index, "dfs_ast", tokens[node->token_index].lexeme};
+            }
+        }
+    }
+    else{
+        for (auto child : node->children) {
+            err_info err = dfs_ast(scope, child, depth + 1);
+            if (err.err) return err;
+        }
+    }
     return {false, 0, 0, "", ""};
 }
 
@@ -894,7 +1126,12 @@ int main(int argc, char* argv[]) {
 
     // dfs_ast()
 
-    err = dfs_ast();
+    err = dfs_ast(main_ast, main_ast, 0);
+    if(err.err){
+        cout << "Error at line " << err.line << ", index " << err.index << ", " << err.part << ": " << err.word << endl;
+        return 1;
+    }
+    else cout << "dfs_ast runs successfully" << endl << endl;
 
     // safe exit
 
